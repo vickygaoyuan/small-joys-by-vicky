@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800;900&amp;family=Poppins:wght@400;500;600;800;900&amp;display=swap" rel="stylesheet">
+<style>
+html,body{height:100%}body{margin:0;background:oklch(0.975 0.012 250);color:oklch(0.3 0.0133 255);font-family:Nunito,system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden}
+a{color:oklch(0.5 0.0456 265)}a:hover{color:oklch(0.4 0.0532 265)}
+</style>
+</helmet>
+<div style="height:100dvh;display:flex;justify-content:center;align-items:center;padding:max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));box-sizing:border-box;overflow:hidden">
+<div style="width:100%;max-width:440px;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;container-type:inline-size">
+
+  <div style="text-align:center;display:flex;flex-direction:column;gap:6px;width:100%;flex:none">
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;font-family:Poppins,sans-serif;font-weight:500;font-size:14px;white-space:nowrap;color:oklch(0.45 0.0304 250)"><span>Due {{ eddText }}</span><sc-if value="{{ hasWeek }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true">·</span><span>Week {{ weekText }}</span></sc-if></div>
+    <div style="font-family:Poppins,sans-serif;font-weight:900;font-size:clamp(20px,5.6cqw,26px);letter-spacing:-0.01em;line-height:1.15;white-space:nowrap;color:#000"><div>{{ titleTop }}</div><div>{{ titleRest }}<span style="color:{{ objColor }}">{{ objName }}</span></div></div>
+  </div>
+
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100%">
+    
+
+    <div ref="{{ dialRef }}" tabindex="0" aria-label="Pregnancy wheel" onKeyDown="{{ onKey }}" style="position:relative;margin:4cqw 0;width:min(calc(100% - 9cqw), calc(100dvh - 11rem), 420px);aspect-ratio:1;flex:none;container-type:inline-size;touch-action:none;cursor:{{ cursor }};outline:none;user-select:none">
+
+      <div style="position:absolute;inset:0;border-radius:50%;transform:rotate({{ calRot }}deg);background:{{ monthShade }};box-shadow:0 2px 4px oklch(0.3 0.0114 250 / 0.12),0 14px 34px -6px oklch(0.3 0.019 250 / 0.22)">
+        <sc-for list="{{ dayTicks }}" as="d" hint-placeholder-count="365">
+          <div style="position:absolute;left:50%;top:0;width:0;height:50%;transform-origin:50% 100%;transform:rotate({{ d.a }}deg)"><div style="position:absolute;left:-0.5px;top:0.5cqw;width:1px;height:{{ d.h }}cqw;border-radius:1px;background:oklch(0.42 0.0608 250);opacity:{{ d.o }}"></div></div>
+        </sc-for>
+        <sc-for list="{{ monthSeps }}" as="m" hint-placeholder-count="12">
+          <div style="position:absolute;left:50%;top:0;width:0;height:50%;transform-origin:50% 100%;transform:rotate({{ m.a }}deg)"><div style="position:absolute;left:-0.6px;top:0;width:1.2px;height:25%;border-radius:1px;background:oklch(0.42 0.0608 250);opacity:0.7"></div></div>
+        </sc-for>
+        <sc-for list="{{ dayLabels }}" as="d" hint-placeholder-count="24">
+          <div style="position:absolute;left:{{ d.x }}%;top:{{ d.y }}%;transform:translate(-50%,-50%) rotate({{ d.r }}deg);font-family:Poppins,sans-serif;font-size:2cqw;font-weight:800;color:oklch(0.42 0.0608 250);line-height:1">{{ d.t }}</div>
+        </sc-for>
+        <sc-for list="{{ monthLabels }}" as="m" hint-placeholder-count="12">
+          <div style="position:absolute;left:{{ m.x }}%;top:{{ m.y }}%;transform:translate(-50%,-50%) rotate({{ m.r }}deg);font-family:Poppins,sans-serif;font-size:2.9cqw;font-weight:900;letter-spacing:0.06em;color:oklch(0.42 0.0608 250);line-height:1">{{ m.t }}</div>
+        </sc-for>
+        <div style="position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:6;mix-blend-mode:multiply;opacity:0.55;background:radial-gradient(closest-side,transparent 88%,oklch(0.35 0.0114 250 / 0.1) 100%),url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Cfilter id=%22f%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.012 0.09%22 numOctaves=%222%22 seed=%227%22/%3E%3CfeColorMatrix values=%220 0 0 0 0.4 0 0 0 0 0.35 0 0 0 0 0.35 0 0 0 0.18 0%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23f)%22/%3E%3C/svg%3E'),url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22220%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3CfeColorMatrix values=%220 0 0 0 0.32 0 0 0 0 0.28 0 0 0 0 0.3 0 0 0 0.55 0%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');background-size:100% 100%,400px 400px,220px 220px"></div>
+      </div>
+
+      <div style="position:absolute;inset:12%;border-radius:50%;transform:rotate({{ rot }}deg);transition:{{ dialTransition }};background:oklch(0.985 0.008 270);box-shadow:0 1px 2px oklch(0.25 0.0152 250 / 0.18),0 6px 14px -2px oklch(0.3 0.019 250 / 0.2)">
+        <div style="position:absolute;inset:0;border-radius:50%;background:{{ triBand }};-webkit-mask:radial-gradient(circle closest-side,transparent 88%,#000 88.6%);mask:radial-gradient(circle closest-side,transparent 88%,#000 88.6%)"></div>
+        <sc-for list="{{ weekTicks }}" as="t" hint-placeholder-count="41">
+          <div style="position:absolute;left:50%;top:0;width:0;height:50%;transform-origin:50% 100%;transform:rotate({{ t.a }}deg)"><div style="position:absolute;left:-0.5px;top:0;width:1px;height:{{ t.len }}%;border-radius:1px;background:oklch(0.42 0.0608 250);opacity:0.5"></div></div>
+        </sc-for>
+        <sc-for list="{{ marks }}" as="k" hint-placeholder-count="3">
+          <div style="position:absolute;left:50%;top:0;width:0;height:50%;transform:rotate({{ k.a }}deg);transform-origin:50% 100%">
+            <div style="position:absolute;top:-8cqw;left:-0.75px;width:1.5px;height:22.2cqw;background:{{ k.c }}"></div>
+            <div style="position:absolute;top:-9.7cqw;left:-1.1cqw;width:0;height:0;border-left:1.1cqw solid transparent;border-right:1.1cqw solid transparent;border-bottom:1.8cqw solid {{ k.c }}"></div>
+            <div style="position:absolute;top:13.8cqw;left:{{ k.lx }}cqw;transform-origin:0 0;transform:rotate(-90deg);white-space:nowrap;line-height:1;font-family:Poppins,sans-serif;font-size:2.2cqw;font-weight:500;letter-spacing:0.04em;color:{{ k.c }}">{{ k.t }}</div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ weeks }}" as="w" hint-placeholder-count="40">
+          <button data-week="{{ w.week }}" aria-label="{{ w.aria }}" tabindex="-1" style="position:absolute;left:{{ w.x }}%;top:{{ w.y }}%;width:5.4cqw;height:5.4cqw;padding:0;border:0;border-radius:50%;transform:translate(-50%,-50%) rotate({{ w.r }}deg);background:{{ w.bg }};color:{{ w.color }};box-shadow:{{ w.shadow }};font-family:Poppins,sans-serif;font-size:{{ w.fs }}cqw;font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 200ms,box-shadow 200ms,font-size 200ms;z-index:{{ w.z }}">{{ w.week }}</button>
+        </sc-for>
+        <div style="position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:6;mix-blend-mode:multiply;opacity:0.55;background:radial-gradient(closest-side,transparent 80%,oklch(0.35 0.0114 250 / 0.1) 100%),url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Cfilter id=%22f%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.012 0.09%22 numOctaves=%222%22 seed=%227%22/%3E%3CfeColorMatrix values=%220 0 0 0 0.4 0 0 0 0 0.35 0 0 0 0 0.35 0 0 0 0.18 0%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23f)%22/%3E%3C/svg%3E'),url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22220%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3CfeColorMatrix values=%220 0 0 0 0.32 0 0 0 0 0.28 0 0 0 0 0.3 0 0 0 0.55 0%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');background-size:100% 100%,400px 400px,220px 220px"></div>
+      </div>
+
+      <div style="position:absolute;inset:27.5%;border-radius:50%;z-index:3;background:transparent;overflow:hidden;color:oklch(0.5 0.0152 255)">
+        <sc-if value="{{ isEarly }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;top:50%;width:34%;padding-right:1cqw;box-sizing:border-box;transform:translateY(-50%);display:flex;justify-content:flex-end;z-index:5;pointer-events:none;font-family:Poppins,sans-serif;font-weight:400;font-size:11cqw;line-height:1;color:#000">&lt;</div>
+        </sc-if>
+        <sc-for list="{{ slots }}" as="f" hint-placeholder-count="1">
+          <div style="position:absolute;inset:{{ f.ins }};opacity:{{ f.op }};visibility:{{ f.vis }};transform:scale({{ f.sc }});transition:opacity 300ms ease,transform 380ms cubic-bezier(0.22,1,0.36,1),visibility 300ms">
+            <div role="img" aria-label="{{ f.name }}" style="width:100%;height:100%;background-image:{{ f.bg }};background-size:contain;background-position:center;background-repeat:no-repeat"></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="position:absolute;inset:0;transform:rotate({{ armA }}deg);transition:{{ armTransition }};pointer-events:none;z-index:12">
+        <div style="position:absolute;left:50%;top:-4.8cqw;width:5cqw;height:15.4cqw;transform:translateX(-50%);pointer-events:auto;cursor:grab"></div>
+        <div style="position:absolute;left:50%;top:-4.6cqw;width:3.1cqw;height:1.5cqw;transform:translateX(-50%);border-radius:1.6cqw 1.6cqw 0.3cqw 0.3cqw;background:linear-gradient(to right, oklch(0.62 0.01 270), oklch(0.97 0.004 270) 34%, oklch(0.84 0.008 270) 58%, oklch(0.56 0.012 270));box-shadow:inset 0 0.25cqw 0.2cqw oklch(1 0 0 / 0.7), 0 0.1cqw 0 oklch(0.4 0.01 270 / 0.5)"></div>
+        <div style="position:absolute;left:50%;top:-3.2cqw;width:3.3cqw;height:10.4cqw;transform:translateX(-50%);clip-path:polygon(0 0,100% 0,88% 100%,12% 100%);background:linear-gradient(to right, oklch(0.6 0.0266 250), oklch(0.8 0.0228 250) 22%, oklch(0.93 0.0114 250) 38%, oklch(0.8 0.0228 250) 58%, oklch(0.56 0.0266 250));filter:drop-shadow(0 0.6cqw 0.8cqw oklch(0.3 0.0152 250 / 0.35))">
+          <div style="position:absolute;left:0;right:0;top:0.9cqw;height:0.45cqw;background:linear-gradient(to right, oklch(0.62 0.01 270), oklch(0.97 0.004 270) 34%, oklch(0.84 0.008 270) 58%, oklch(0.56 0.012 270))"></div>
+        </div>
+        <div style="position:absolute;left:50%;top:7cqw;width:3.1cqw;height:2.2cqw;transform:translateX(-50%);border-radius:0.3cqw;background:linear-gradient(to right, oklch(0.62 0.01 270), oklch(0.97 0.004 270) 34%, oklch(0.84 0.008 270) 58%, oklch(0.56 0.012 270));box-shadow:0 0.15cqw 0.3cqw oklch(0.3 0.01 270 / 0.35)">
+          <div style="position:absolute;left:0;right:0;top:32%;height:0.14cqw;background:oklch(0.45 0.01 270 / 0.55)"></div>
+          <div style="position:absolute;left:0;right:0;top:66%;height:0.14cqw;background:oklch(0.45 0.01 270 / 0.55)"></div>
+        </div>
+        <div style="position:absolute;left:50%;top:9.1cqw;width:1.7cqw;height:2.4cqw;transform:translateX(-50%);background:linear-gradient(to right, oklch(0.62 0.01 270), oklch(0.97 0.004 270) 34%, oklch(0.84 0.008 270) 58%, oklch(0.56 0.012 270))">
+          <div style="position:absolute;left:50%;top:40%;width:0.9cqw;height:0.9cqw;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 35% 35%, oklch(0.98 0.003 270), oklch(0.6 0.01 270));box-shadow:0 0 0 0.08cqw oklch(0.4 0.01 270 / 0.6)"></div>
+        </div>
+        <div style="position:absolute;left:42.5cqw;top:10.96cqw;width:15cqw;height:15cqw;border-radius:50%;box-shadow:0 0 0 0.06cqw oklch(0.5 0.01 270 / 0.45), 0 0.7cqw 1.4cqw -0.4cqw oklch(0.25 0.02 270 / 0.3)">
+          <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 210deg, oklch(0.98 0.003 270), oklch(0.8 0.008 270) 22%, oklch(0.7 0.01 270) 42%, oklch(0.9 0.005 270) 62%, oklch(0.76 0.008 270) 80%, oklch(0.98 0.003 270));-webkit-mask:radial-gradient(circle closest-side, transparent calc(100% - 0.4cqw), #000 calc(100% - 0.36cqw));mask:radial-gradient(circle closest-side, transparent calc(100% - 0.4cqw), #000 calc(100% - 0.36cqw))"></div>
+          <div style="position:absolute;inset:0.38cqw;border-radius:50%;overflow:hidden;background:oklch(0.985 0.008 270);box-shadow:0 0 0 0.05cqw oklch(0.5 0.01 270 / 0.5)">
+            <div ref="{{ lensRef }}" style="position:absolute;inset:0"></div>
+            <div style="position:absolute;inset:0;border-radius:50%;pointer-events:none;background:radial-gradient(circle closest-side, transparent 72%, oklch(0.4 0.0076 250 / 0.1) 100%);box-shadow:inset 0 0.25cqw 0.6cqw oklch(0.3 0.02 270 / 0.14)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:center;gap:18px;width:100%">
+    
+    <div style="text-align:center;min-width:150px">
+      
+      
+      
+      <sc-if value="{{ showToday }}" hint-placeholder-val="{{ false }}">
+        
+      </sc-if>
+    </div>
+    
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%">
+    
+    
+  </div>
+
+  
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startWeek&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:23,&quot;min&quot;:1,&quot;max&quot;:40,&quot;tsType&quot;:&quot;number&quot;},&quot;trimesterColors&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const DATA={4:[0.2,1],5:[0.3,1],6:[0.6,1],7:[1.3,1],8:[1.6,1],9:[2.3,2],10:[3.1,4],11:[4.1,7],12:[5.4,14],13:[7.4,23],14:[8.7,43],15:[10.1,70],16:[11.6,100],17:[13,140],18:[14.2,190],19:[15.3,240],20:[25.6,300],21:[26.7,350],22:[27.8,430],23:[28.9,500],24:[30,600],25:[34.6,660],26:[35.6,760],27:[36.6,875],28:[37.6,1000],29:[38.6,1150],30:[39.9,1300],31:[41.1,1500],32:[42.4,1700],33:[43.7,1900],34:[45,2150],35:[46.2,2400],36:[47.4,2600],37:[48.6,2850],38:[49.5,3100],39:[50.7,3300],40:[51.2,3500]};
+const FRUIT=[["poppy seed",0.2],["sesame seed",0.3],["lentil",0.6],["blueberry",1.3],["kidney bean",1.6],["cherry",2.3],["grape",2.5],["strawberry",3.1],["fig",4.1],["lime",5.4],["kiwi",6],["pea pod",7.4],["apple",8],["lemon",8.7],["orange",10.1],["avocado",11.6],["pear",13],["bell pepper",14.2],["tomato",15.3],["carrot",18],["banana",20],["cucumber",25],["eggplant",30],["napa cabbage",38],["cantaloupe",45],["mini watermelon",50]];
+const USED=new Set(["poppy seed","sesame seed","lentil","blueberry","kidney bean","cherry","strawberry","fig","lime","pea pod","lemon","orange","avocado","pear","bell pepper","tomato","cucumber","eggplant","napa cabbage","cantaloupe","mini watermelon"]);
+const MILES={12:"First trimester complete",20:"Anatomy scan week",28:"Third trimester begins",37:"Full term — anytime now!",40:"Due date — meeting baby soon!"};
+const MONTHS=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const MDAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+const K=360/365, DAY=86400000;
+const TRI=[["oklch(0.92 0.0171 250)","oklch(0.62 0.0456 250)"],["oklch(0.83 0.0304 250)","oklch(0.52 0.057 250)"],["oklch(0.72 0.0418 250)","oklch(0.42 0.0608 250)"]];
+const FRUIT_COLOR={"poppy seed":"oklch(0.45 0.09 265)","sesame seed":"oklch(0.55 0.12 70)","lentil":"oklch(0.56 0.16 50)","blueberry":"oklch(0.45 0.18 270)","kidney bean":"oklch(0.46 0.17 20)","cherry":"oklch(0.5 0.2 22)","grape":"oklch(0.45 0.18 330)","strawberry":"oklch(0.55 0.21 25)","fig":"oklch(0.45 0.16 345)","lime":"oklch(0.51 0.17 135)","kiwi":"oklch(0.53 0.14 120)","pea pod":"oklch(0.51 0.17 138)","apple":"oklch(0.55 0.21 28)","lemon":"oklch(0.53 0.13 92)","orange":"oklch(0.54 0.17 55)","avocado":"oklch(0.5 0.14 130)","pear":"oklch(0.52 0.15 115)","bell pepper":"oklch(0.55 0.22 28)","tomato":"oklch(0.56 0.21 32)","carrot":"oklch(0.54 0.17 50)","banana":"oklch(0.52 0.13 95)","cucumber":"oklch(0.5 0.15 145)","eggplant":"oklch(0.45 0.17 315)","napa cabbage":"oklch(0.51 0.15 135)","cantaloupe":"oklch(0.53 0.15 65)","mini watermelon":"oklch(0.52 0.16 145)"};
+const fmtCm=v=>(+v.toFixed(1))+" cm";
+const fmtDate=d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const pos=(R,a)=>({x:50+R*Math.sin(a*Math.PI/180),y:50-R*Math.cos(a*Math.PI/180)});
+const norm=a=>((a%360)+360)%360;
+const gAt=w=>(w-1)*7+3.5;
+
+class Component extends DCLogic {
+  dialRef = React.createRef();
+  lensRef = React.createRef();
+  state = { rot: -((Math.min(40,Math.max(1,this.props.startWeek ?? 23))-1)*7+3)*K, armS: null, dragging: false, dragArm: false };
+
+  wk(g){ return Math.min(40,Math.max(1,Math.floor(g/7)+1)); }
+  armAngle(s=this.state){ return s.armS==null ? 0 : s.armS; }
+  dayUnderArm(s=this.state){
+    const d=norm(this.armAngle(s)-s.rot)/K;
+    return d<280 ? d : null;
+  }
+  curWeek(s=this.state){ const d=this.dayUnderArm(s); return d==null ? null : this.wk(d); }
+  near(target,ref){ return target+Math.round((ref-target)/360)*360; }
+  // Days since LMP, kept within 0–280 so the due date is never in the past.
+  todayDay(rot){
+    const g=Math.round(norm(-rot)/K)%365;
+    return g<=280 ? g : (g-280<365-g ? 280 : 0);
+  }
+  goTo(w){
+    w=Math.min(40,Math.max(1,w));
+    this.setState(s=>({armS:this.near(s.rot+gAt(w)*K,this.armAngle(s))}),()=>this.clickIfWeekChanged());
+  }
+  shift(dw){ const w=this.curWeek(); this.goTo(w==null ? (dw>0?1:40) : w+dw); }
+  angle(e){ const r=this.dialRef.current.getBoundingClientRect(); return Math.atan2(e.clientX-(r.left+r.width/2),(r.top+r.height/2)-e.clientY)*180/Math.PI; }
+  armTo(a){
+    this.setState(s=>({armS:this.near(a,this.armAngle(s))}),()=>this.clickIfWeekChanged());
+  }
+
+  audio(){
+    if(!this.ac){
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+      try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(err){}
+      this.ac=new AC();
+      const len=Math.floor(this.ac.sampleRate*0.04), buf=this.ac.createBuffer(1,len,this.ac.sampleRate), ch=buf.getChannelData(0);
+      for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+      this.noise=buf;
+      this.out=this.ac.createGain(); this.out.gain.value=3; this.out.connect(this.ac.destination);
+    }
+    if(this.ac.state!=="running") this.ac.resume();
+    return this.ac;
+  }
+  // iOS only starts Web Audio inside a touchend/click and mutes it with the ring switch
+  // unless an <audio> element is playing, so both are kicked off from the first tap.
+  unlockAudio(){
+    const ac=this.audio(); if(!ac) return;
+    const s=ac.createBufferSource(); s.buffer=ac.createBuffer(1,1,22050); s.connect(ac.destination); s.start(0);
+    if(!this.keepAlive && !(navigator.audioSession)){
+      const rate=8000, n=rate, bytes=new Uint8Array(44+n), v=new DataView(bytes.buffer);
+      const w=(o,str)=>{ for(let i=0;i<str.length;i++) bytes[o+i]=str.charCodeAt(i); };
+      w(0,"RIFF"); v.setUint32(4,36+n,true); w(8,"WAVEfmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+      v.setUint32(24,rate,true); v.setUint32(28,rate,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,"data"); v.setUint32(40,n,true);
+      bytes.fill(128,44);
+      const el=new Audio(URL.createObjectURL(new Blob([bytes],{type:"audio/wav"})));
+      el.loop=true; el.setAttribute("playsinline",""); el.play().catch(()=>{});
+      this.keepAlive=el;
+    }
+    if(ac.state==="running") this.removeUnlock();
+  }
+  removeUnlock(){
+    if(!this.onUnlock) return;
+    ["touchend","click","pointerup","keydown"].forEach(t=>document.removeEventListener(t,this.onUnlock,true));
+    this.onUnlock=null;
+  }
+  gearTick(){
+    const ac=this.audio(); if(!ac) return;
+    const now=performance.now(); if(now-(this._lastTick||0)<28) return; this._lastTick=now;
+    const t=ac.currentTime, out=this.out;
+    const src=ac.createBufferSource(); src.buffer=this.noise;
+    const bp=ac.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1500+Math.random()*400; bp.Q.value=2.5;
+    const lp=ac.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=3200;
+    const g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.09,t+0.003); g.gain.exponentialRampToValueAtTime(0.0001,t+0.04);
+    src.connect(bp).connect(lp).connect(g).connect(out); src.start(t); src.stop(t+0.05);
+    const o=ac.createOscillator(); o.type="sine"; o.frequency.setValueAtTime(150+Math.random()*20,t); o.frequency.exponentialRampToValueAtTime(80,t+0.04);
+    const og=ac.createGain(); og.gain.setValueAtTime(0.0001,t); og.gain.exponentialRampToValueAtTime(0.045,t+0.004); og.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+    o.connect(og).connect(out); o.start(t); o.stop(t+0.06);
+  }
+  detentClick(){
+    const ac=this.audio(); if(!ac) return;
+    const t=ac.currentTime, out=this.out;
+    const src=ac.createBufferSource(); src.buffer=this.noise;
+    const hp=ac.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=3000;
+    const g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.07,t+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
+    src.connect(hp).connect(g).connect(out); src.start(t); src.stop(t+0.03);
+    const o=ac.createOscillator(); o.type="sine"; o.frequency.value=2100+Math.random()*150;
+    const og=ac.createGain(); og.gain.setValueAtTime(0.0001,t); og.gain.exponentialRampToValueAtTime(0.025,t+0.002); og.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+    o.connect(og).connect(out); o.start(t); o.stop(t+0.06);
+  }
+  clickIfWeekChanged(){
+    const w=this.curWeek();
+    if(w!==this._lastArmWeek){ this._lastArmWeek=w; this.detentClick(); }
+  }
+  nearArm(e){
+    const r=this.dialRef.current.getBoundingClientRect();
+    const dx=e.clientX-(r.left+r.width/2), dy=e.clientY-(r.top+r.height/2);
+    if(Math.hypot(dx,dy)<r.width*0.38) return false;
+    let d=norm(this.angle(e)-this.armAngle()); if(d>180) d=360-d;
+    return d<12;
+  }
+
+  // The lens is drawn as SVG in the arm's frame (lens centre at origin, units = dial cqw).
+  // Points are pushed through q = R·tanh(M·d/R): ~M× magnified in the middle and
+  // increasingly squeezed toward the rim, like looking through a convex glass.
+  drawLens(delta){
+    const host=this.lensRef.current; if(!host) return;
+    const R=7.12, M=2.3, LC=31.54, WR=38, P="oklch(0.42 0.0608 250)";
+    const map=(rho,th)=>{
+      const a=(th-delta)*Math.PI/180, u=rho*Math.sin(a), v=LC-rho*Math.cos(a), d=Math.hypot(u,v);
+      if(d<1e-6) return {x:0,y:0,d:0,u:0,v:0};
+      const q=R*Math.tanh(M*d/R);
+      return {x:u*q/d,y:v*q/d,d,u,v};
+    };
+    const f=n=>n.toFixed(3);
+    const path=(pts,steps=24)=>{
+      let out="";
+      for(let i=0;i<pts.length;i++){
+        const [r0,t0]=pts[i], [r1,t1]=pts[(i+1)%pts.length];
+        for(let j=0;j<steps;j++){ const k=j/steps, p=map(r0+(r1-r0)*k,t0+(t1-t0)*k); out+=(out?"L":"M")+f(p.x)+" "+f(p.y); }
+      }
+      return out+"Z";
+    };
+    const win=32, lo=delta-win, hi=delta+win;
+    const arcs=(a0,a1)=>{
+      const res=[];
+      for(const s of [-360,0,360]){ const x0=Math.max(a0+s,lo), x1=Math.min(a1+s,hi); if(x1>x0) res.push([x0,x1]); }
+      return res;
+    };
+    const tri=(this.props.trimesterColors ?? true)?TRI.map(t=>t[0]):[0,1,2].map(()=>"oklch(0.88 0.019 260)");
+    const bands=[[0,91*K,tri[0]],[91*K,189*K,tri[1]],[189*K,280*K,tri[2]],[280*K,360,"oklch(0.94 0.01 260)"]];
+    let svg='<rect x="-9" y="-9" width="18" height="18" fill="oklch(0.985 0.01 240)"/>';
+    svg+='<path d="'+path([[WR,lo],[WR,hi],[0,hi],[0,lo]],40)+'" fill="oklch(0.985 0.008 270)"/>';
+    bands.forEach(([a0,a1,c])=>arcs(a0,a1).forEach(([x0,x1])=>{
+      svg+='<path d="'+path([[WR*0.88,x0],[WR*0.88,x1],[WR,x1],[WR,x0]],20)+'" fill="'+c+'"/>';
+    }));
+    const line=(r0,r1,th,w,c,op)=>{
+      let d="";
+      for(let j=0;j<=16;j++){ const p=map(r0+(r1-r0)*j/16,th); d+=(d?"L":"M")+f(p.x)+" "+f(p.y); }
+      return '<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" opacity="'+op+'"/>';
+    };
+    const near=th=>{ let x=norm(th-delta); if(x>180) x-=360; return Math.abs(x)<win; };
+    for(let w=0;w<=40;w++){ const th=w*7*K; if(near(th)) svg+=line(WR,WR-(w%4===0?0.13:0.08)*WR,th,0.55,P,0.5); }
+    [0,280*K].forEach(th=>{ if(near(th)) svg+=line(46,23.8,th,0.8,P,1); });
+    const sel=this.curWeek();
+    for(let w=1;w<=40;w++){
+      const th=gAt(w)*K; if(!near(th)) continue;
+      const p=map(0.415*76,th); if(p.d>R*2) continue;
+      const g=Math.tanh(M*p.d/R), st=p.d<1e-6?M:R*g/p.d, sr=M*(1-g*g);
+      const al=Math.atan2(p.v,p.u)*180/Math.PI-90;
+      svg+='<text transform="translate('+f(p.x)+' '+f(p.y)+') rotate('+f(al)+') scale('+f(st)+' '+f(sr)+') rotate('+f(-al+th-delta)+')"'
+        +' text-anchor="middle" dominant-baseline="central" font-family="Poppins,sans-serif" font-weight="800" font-size="2.2"'
+        +' fill="'+(w===sel?"oklch(0.28 0.0532 250)":P)+'">'+w+'</text>';
+    }
+    host.innerHTML='<svg viewBox="'+(-R)+' '+(-R)+' '+(2*R)+' '+(2*R)+'" width="100%" height="100%" style="display:block">'+svg+'</svg>';
+  }
+  // Mirrors the CSS transitions on the wheel and arm so the lens content glides with them.
+  syncLens(){
+    const target=this.armAngle()-this.state.rot;
+    cancelAnimationFrame(this._lensRaf);
+    const from=this._lensDelta;
+    if(this.state.dragging || from==null || Math.abs(target-from)<1e-4){ this._lensDelta=target; this.drawLens(target); return; }
+    const t0=performance.now(), ease=t=>1-Math.pow(1-t,4);
+    const step=now=>{
+      const t=Math.min(1,(now-t0)/280);
+      this._lensDelta=from+(target-from)*ease(t); this.drawLens(this._lensDelta);
+      if(t<1) this._lensRaf=requestAnimationFrame(step);
+    };
+    this._lensRaf=requestAnimationFrame(step);
+  }
+  componentDidUpdate(){ this.syncLens(); }
+
+  componentDidMount(){
+    const el=this.dialRef.current; if(!el) return;
+    this.syncLens();
+    if(document.fonts) document.fonts.ready.then(()=>this.drawLens(this._lensDelta));
+    this.onDown=e=>{
+      if(e.button>0) return;
+      el.setPointerCapture(e.pointerId);
+      this.audio();
+      this._lastArmWeek=this.curWeek();
+      const dot=e.target.closest&&e.target.closest("[data-week]");
+      this.drag={last:this.angle(e),sx:e.clientX,sy:e.clientY,moved:false,dotWeek:dot?+dot.dataset.week:null,arm:!dot&&this.nearArm(e),spin:0};
+      this.setState({dragging:true,dragArm:this.drag.arm});
+    };
+    this.onMove=e=>{
+      const d=this.drag; if(!d) return;
+      if(!d.moved && Math.hypot(e.clientX-d.sx,e.clientY-d.sy)>6) d.moved=true;
+      const a=this.angle(e); let da=a-d.last; if(da>180)da-=360; if(da<-180)da+=360; d.last=a;
+      if(!d.moved) return;
+      if(d.arm) this.armTo(a);
+      else {
+        this.setState(s=>({rot:s.rot+da}));
+        d.spin+=Math.abs(da);
+        if(d.spin>=2*K){ d.spin%=2*K; this.gearTick(); }
+      }
+    };
+    this.onUp=e=>{
+      const d=this.drag; if(!d) return; this.drag=null;
+      this.setState({dragging:false,dragArm:false});
+      if(!d.moved && d.dotWeek){ this.goTo(d.dotWeek); return; }
+      if(d.arm){ const w=this.curWeek(); if(w!=null) this.goTo(w); }
+      else this.setState(s=>({rot:this.near(-this.todayDay(s.rot)*K,s.rot)}));
+    };
+    el.addEventListener("pointerdown",this.onDown);
+    el.addEventListener("pointermove",this.onMove);
+    el.addEventListener("pointerup",this.onUp);
+    el.addEventListener("pointercancel",this.onUp);
+    this.onUnlock=()=>this.unlockAudio();
+    ["touchend","click","pointerup","keydown"].forEach(t=>document.addEventListener(t,this.onUnlock,true));
+    // When embedded in the gallery, pause sound while the mouse is outside the frame.
+    this.onGalleryMsg=e=>{
+      if(e.source!==window.parent||e.data?.type!=="gallery-audio"||!this.ac) return;
+      if(e.data.active){ this.ac.resume(); if(this.keepAlive) this.keepAlive.play().catch(()=>{}); }
+      else { this.ac.suspend(); if(this.keepAlive) this.keepAlive.pause(); }
+    };
+    window.addEventListener("message",this.onGalleryMsg);
+  }
+  componentWillUnmount(){
+    cancelAnimationFrame(this._lensRaf);
+    const el=this.dialRef.current; if(!el) return;
+    el.removeEventListener("pointerdown",this.onDown); el.removeEventListener("pointermove",this.onMove);
+    el.removeEventListener("pointerup",this.onUp); el.removeEventListener("pointercancel",this.onUp);
+    this.removeUnlock();
+    window.removeEventListener("message",this.onGalleryMsg);
+    if(this.keepAlive){ this.keepAlive.pause(); this.keepAlive=null; }
+    if(this.ac) this.ac.close();
+  }
+
+  calendar(){
+    if(this._cal) return this._cal;
+    const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const doy=Math.round((today-new Date(today.getFullYear(),0,1))/DAY);
+    const calRot=-(doy+0.5)*K;
+    const dticks=[],seps=[],months=[],days=[],shade=[];
+    let start=0;
+    MDAYS.forEach((n,i)=>{
+      const a0=start*K, a1=(start+n)*K;
+      seps.push({a:a0});
+      shade.push((i%2?"oklch(0.965 0.0068 260)":"oklch(0.995 0.006 250)")+" "+a0.toFixed(3)+"deg "+a1.toFixed(3)+"deg");
+      const am=(start+n/2)*K; months.push({t:MONTHS[i],...pos(42.6,am),a:am});
+      for(let dd=1;dd<=n;dd++) dticks.push({a:(start+dd-1)*K+0.07,h:dd%5?1.6:2.6,o:dd%5?0.45:0.75});
+      [10,20].forEach(dd=>{const a=(start+dd-1)*K+0.07; days.push({t:String(dd),...pos(46.2,a),a});});
+      start+=n;
+    });
+    this._cal={today,calRot,monthSeps:seps,monthLabels:months,dayLabels:days,dayTicks:dticks,
+      monthShade:"conic-gradient("+shade.join(",")+")",
+      todayLabel:today.toLocaleDateString("en-US",{month:"short",day:"numeric"}).toUpperCase()};
+    return this._cal;
+  }
+
+  renderVals(){
+    const {rot,dragging,dragArm,armS}=this.state; const locked=armS!=null;
+    const cal=this.calendar();
+    const upright=a=>{const f=norm(a+cal.calRot);return f>90&&f<270?a+180:a;};
+    const week=this.curWeek();
+    const none=week==null;
+    const data=none?null:DATA[week];
+    let obj=null;
+    if(data) obj=FRUIT.reduce((b,o)=>Math.abs(o[1]-data[0])<Math.abs(b[1]-data[0])?o:b,FRUIT[0]);
+    const tc=(this.props.trimesterColors ?? true)?TRI:[0,1,2].map(()=>["oklch(0.88 0.019 260)","oklch(0.58 0.0456 270)"]);
+    const triBand="conic-gradient("+tc[0][0]+" 0deg "+(91*K)+"deg,"+tc[1][0]+" "+(91*K)+"deg "+(189*K)+"deg,"+tc[2][0]+" "+(189*K)+"deg "+(280*K)+"deg,oklch(0.94 0.01 260) "+(280*K)+"deg 360deg)";
+    const weeks=[];
+    for(let w=1;w<=40;w++){
+      const a=gAt(w)*K, sel=w===week, t=w<=13?0:w<=27?1:2;
+      weeks.push({week:w,aria:"Week "+w,...pos(41.5,a),r:a,z:sel?3:1,
+        fs:2.2,bg:"transparent",color:sel?"transparent":"oklch(0.42 0.0608 250)",shadow:"none"});
+    }
+    const weekTicks=[];
+    for(let w=0;w<=40;w++) weekTicks.push({a:w*7*K,len:w%4===0?13:8});
+    const marks=[{t:"LMP",a:0,c:"oklch(0.42 0.0608 250)",lx:-3.08},{t:"DUE DATE",a:280*K,c:"oklch(0.42 0.0608 250)",lx:0.89}];
+    const gToday=this.todayDay(rot);
+    const lmp=new Date(cal.today.getTime()-gToday*DAY);
+    const edd=new Date(lmp.getTime()+280*DAY);
+    const ws=new Date(lmp.getTime()+(week-1)*7*DAY), we=new Date(ws.getTime()+6*DAY);
+    const short=d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+    const max=data&&obj?Math.max(data[0],obj[1]):1;
+    const fruitKey=obj?obj[0]:"poppy seed";
+        return {
+      ...cal, rot, armA:this.armAngle(), dialRef:this.dialRef, lensRef:this.lensRef, cursor:dragging?"grabbing":"grab",
+      monthLabels:cal.monthLabels.map(m=>({...m,r:upright(m.a)})),
+      dayLabels:cal.dayLabels.map(d=>({...d,r:upright(d.a)})),
+      dialTransition:dragging&&!dragArm?"none":"transform 280ms cubic-bezier(0.22,1,0.36,1)",
+      armTransition:dragging?"none":"transform 280ms cubic-bezier(0.22,1,0.36,1)",
+      armColor:"oklch(0.42 0.0608 250)",
+      hint:"Turn the wheel to line up today with your week. Drag the purple selector to explore other weeks.",
+      showToday:locked, backToday:()=>this.setState({armS:null}),
+      triBand, weeks, weekTicks, marks, week,
+      magWeek:none?"":week,
+      weekText:none?"":week,
+      hasWeek:!none,
+      trimester:"Week "+week+", "+(week<=13?"first":week<=27?"second":"third")+" trimester",
+      subline:locked?short(ws)+" – "+fmtDate(we):"Today · "+Math.floor(gToday/7)+"w "+(gToday%7)+"d",
+      lmpText:fmtDate(lmp), eddText:short(edd),
+      isEarly:!none&&!data,
+      slots:FRUIT.filter(f=>USED.has(f[0])).map(f=>{const on=none?false:obj?obj[0]===f[0]:f[0]==="poppy seed";return {ins:obj?"6%":"22% 10% 22% 34%",bg:'url("fruits/'+f[0].replace(/[^a-z0-9]+/g,"-")+'.png")',name:f[0],op:on?1:0,vis:on?"visible":"hidden",sc:on?1:0.85};}),
+      sizeLead:data?"About the size of a":"This week",
+      objName:none?"":obj?obj[0]:"smaller than a poppy seed",
+      objColor:FRUIT_COLOR[fruitKey]||FRUIT_COLOR["poppy seed"],
+      titleLead:obj?"My baby is about the size of a":"My baby is",
+      titleTop:none?"Select a week":obj?"My baby is about":"My baby is",
+      titleRest:none?"to see baby size":obj?"the size of a ":"",
+      objShort:obj?obj[0]:"",
+      lengthText:data?fmtCm(data[0]):"—",
+      weightText:data?data[1].toLocaleString("en-US")+" g":"—",
+      hasBars:!!data, babyLen:data?fmtCm(data[0]):"", objLen:obj?fmtCm(obj[1]):"",
+      babyBar:data?data[0]/max*100:0, objBar:obj?obj[1]/max*100:0,
+      hasMilestone:!!MILES[week], milestone:MILES[week]||"",
+      atStart:week===1, atEnd:week===40, prevOpacity:week===1?0.4:1, nextOpacity:week===40?0.4:1,
+      prev:()=>this.shift(-1), next:()=>this.shift(1),
+      onKey:e=>{ if(e.key==="ArrowRight"||e.key==="ArrowUp"){e.preventDefault();this.shift(1);} if(e.key==="ArrowLeft"||e.key==="ArrowDown"){e.preventDefault();this.shift(-1);} }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Worry Free Cube</title>
+<style>
+  :root {
+    --s: 32vmin;
+    --r: calc(var(--s) * 0.17);
+    --tilt-x: -16deg;
+    --tilt-y: -22deg;
+    --page-bg: #e3dbd1;
+    --studio-wall: #ebe4da;
+    --studio-floor: #cfc4b6;
+    --studio-glow: rgba(255, 252, 246, 0.85);
+    --studio-vignette: rgba(84, 64, 44, 0.22);
+    --studio-grain: 0.05;
+    --shell-bg: #f7f4ef;
+    --shell-fg: #2b2622;
+    --shell-muted: #84796e;
+    --shell-dot: #cfc4b6;
+    --shell-dot-on: #2b2622;
+    --shell-shadow: rgba(62, 44, 24, 0.12);
+    --floor: rgba(78, 50, 24, 0.42);
+    --font: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+    --ink: #3c3026;
+    --ink-soft: #9a846c;
+    --paper: #f3e7d6;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #1a1816;
+      --studio-wall: #2b2825;
+      --studio-floor: #121110;
+      --studio-glow: rgba(255, 236, 212, 0.16);
+      --studio-vignette: rgba(0, 0, 0, 0.6);
+      --studio-grain: 0.07;
+      --shell-bg: #1c1b19;
+      --shell-fg: #f3ece4;
+      --shell-muted: #a89c90;
+      --shell-dot: #5a534c;
+      --shell-dot-on: #f3ece4;
+      --shell-shadow: rgba(0, 0, 0, 0.45);
+      --floor: rgba(0, 0, 0, 0.78);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  [hidden] { display: none !important; }
+
+  html { -webkit-text-size-adjust: 100%; height: 100%; }
+
+  body {
+    margin: 0;
+    height: 100%;
+    min-height: 100dvh;
+    position: relative;
+    background:
+      radial-gradient(ellipse 120% 90% at 50% 45%, transparent 52%, var(--studio-vignette) 100%),
+      radial-gradient(ellipse 55% 48% at 50% 44%, var(--studio-glow), transparent 72%),
+      linear-gradient(to bottom, var(--studio-wall) 0%, var(--page-bg) 58%, var(--studio-floor) 100%);
+    background-color: var(--page-bg);
+    color: var(--shell-fg);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--studio-grain);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.6 -0.5'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+  }
+
+  .app {
+    height: 100dvh;
+    overflow: hidden;
+    overflow: clip;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding:
+      max(48px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(48px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+
+  h1 {
+    margin: 0 0 14px;
+    text-align: center;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--shell-muted);
+  }
+
+  .stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: calc(var(--s) * 4);
+    perspective-origin: 50% 50%;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: visible;
+  }
+
+  .stage.is-dragging { cursor: grabbing; }
+
+  .cube {
+    width: var(--s);
+    height: var(--s);
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  }
+
+  .face {
+    position: absolute;
+    left: calc(var(--r) - 0.5px);
+    top: calc(var(--r) - 0.5px);
+    width: calc(var(--s) - var(--r) * 2 + 1px);
+    height: calc(var(--s) - var(--r) * 2 + 1px);
+    border: 0;
+    border-radius: 0;
+    background-color: var(--paper);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    color-scheme: light;
+    overflow: hidden;
+  }
+
+  .face::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.32;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.23 0 0 0 0 0.17 1.5 0 0 0 -0.62'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    -webkit-mask-image: radial-gradient(closest-side, #000 78%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 78%, transparent 100%);
+  }
+
+  .front  { transform: translateZ(calc(var(--s) / 2 + 0.8px)); }
+  .back   { transform: rotateY(180deg) translateZ(calc(var(--s) / 2 + 0.8px)); }
+  .right  { transform: rotateY(90deg) translateZ(calc(var(--s) / 2 + 0.8px)); }
+  .left   { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2 + 0.8px)); }
+  .top    { transform: rotateX(90deg) translateZ(calc(var(--s) / 2 + 0.8px)); }
+  .bottom { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2 + 0.8px)); }
+
+  .shell {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    pointer-events: none;
+  }
+
+  .bound {
+    position: absolute;
+    display: block;
+    margin: 0;
+    border: 0;
+    transform-origin: center center;
+    pointer-events: none;
+    left: 50%;
+    top: 50%;
+    width: 2px;
+    height: 2px;
+    margin-left: -1px;
+    margin-top: -1px;
+    background: transparent;
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+  }
+
+  .body3d {
+    position: absolute;
+    left: -64px;
+    top: -64px;
+    width: calc(100% + 128px);
+    height: calc(100% + 128px);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .has-body .face {
+    background: transparent !important;
+  }
+
+  .no-body .face {
+    left: 0;
+    top: 0;
+    width: var(--s);
+    height: var(--s);
+    border-radius: calc(var(--s) * 0.16);
+    padding: calc(var(--r) * 0.6);
+  }
+
+  .face-inner {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(8px, calc(var(--s) * 0.045), 22px);
+    gap: clamp(4px, calc(var(--s) * 0.03), 12px);
+  }
+
+  .lens {
+    margin: 0;
+    flex: none;
+    font-family: var(--font);
+    font-size: clamp(9px, calc(var(--s) * 0.042), 13px);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  #widget.is-compact .lens {
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+  }
+
+  #widget.is-compact.is-tiny .face:not(.front) .lens {
+    display: none;
+  }
+
+  #widget.is-picking .face:not(.front) .face-inner {
+    visibility: hidden;
+  }
+
+  .statement {
+    margin: 0;
+    flex: 1;
+    min-height: 0;
+    font-family: var(--font);
+    font-size: clamp(12px, calc(var(--s) * 0.05), 18px);
+    line-height: 1.35;
+    color: var(--ink);
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+
+  .statement.waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.28em;
+    font-size: 18px;
+    color: #c9b79f;
+    opacity: 1;
+  }
+
+
+  .shadow {
+    position: absolute;
+    left: 50%;
+    top: 70%;
+    width: calc(var(--s) * 0.62);
+    height: calc(var(--s) * 0.14);
+    margin: 0;
+    transform: translate(-50%, 0);
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(ellipse at center, var(--floor) 0%, transparent 72%);
+    filter: blur(1.2px);
+  }
+
+  .controls { flex: none; }
+
+  @media (max-height: 500px) and (orientation: landscape) {
+    .app { padding-top: max(6px, env(safe-area-inset-top)); }
+    .readout { font-size: 12px; }
+    .dot { height: 28px; }
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0 12px;
+    }
+    .controls .readout, .controls .dots, .controls .again { margin: 0; }
+  }
+
+  .readout {
+    margin: 2px 0 0;
+    text-align: center;
+    font-size: clamp(13px, 1.6vw, 16px);
+    line-height: 1.4;
+    color: var(--shell-muted);
+  }
+
+  .readout span {
+    color: var(--shell-fg);
+    font-weight: 600;
+  }
+
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .dot {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+    position: relative;
+  }
+
+  .dot::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: inset 0 0 0 1.5px var(--shell-dot);
+    background: transparent;
+  }
+
+  .dot[aria-current="true"]::before {
+    width: 8px;
+    height: 8px;
+    background: var(--shell-dot-on);
+    box-shadow: none;
+  }
+
+  .again {
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    margin: 2px auto 0;
+    padding: 8px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--shell-muted);
+    font-family: var(--font);
+    font-size: 14px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .again:hover { color: var(--shell-fg); }
+  .again.is-off { visibility: hidden; }
+
+  .art {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 55%;
+    z-index: -1;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 16%, #000 80%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 16%, #000 80%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  @keyframes reveal-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes reveal-art {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  #widget.is-revealing .lens {
+    animation: reveal-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  #widget.is-revealing .art {
+    animation: reveal-art 720ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+    transform-origin: 50% 100%;
+  }
+
+  #widget.is-revealing .statement {
+    animation: reveal-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both;
+  }
+
+  #widget.is-revealing .again {
+    animation: reveal-rise 420ms ease-out 360ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #widget.is-revealing .lens,
+    #widget.is-revealing .art,
+    #widget.is-revealing .statement,
+    #widget.is-revealing .again {
+      animation: none;
+    }
+  }
+
+  .art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 100%;
+  }
+
+  .face:not(.front) .face-inner,
+  #widget:not(.is-picking) .front .face-inner {
+    padding-bottom: 46%;
+  }
+
+  .feelings {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 0.4em 0.3em;
+    font-family: var(--font);
+    font-size: clamp(11px, calc(var(--s) * 0.05), 16px);
+    overflow: hidden;
+  }
+
+  .feeling {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    padding: 0.4em 0.75em;
+    border: 1px solid rgba(63, 52, 43, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.6);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.1;
+    cursor: pointer;
+    touch-action: manipulation;
+    color-scheme: light;
+  }
+
+  #widget.is-compact .feelings { gap: 0.3em 0.25em; }
+  #widget.is-compact .feeling { padding: 0.3em 0.6em; }
+
+  .feeling:hover {
+    background: #3f342b;
+    border-color: #3f342b;
+    color: #f8f1e6;
+  }
+
+  .feeling:active { transform: translateY(1px); }
+
+  .feeling:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+
+  :focus-visible {
+    outline: 2px solid var(--shell-fg);
+    outline-offset: 3px;
+  }
+
+</style>
+</head>
+<body>
+    <main class="app is-picking" id="widget">
+      <div class="stage" id="stage">
+        <div class="shadow" aria-hidden="true"></div>
+        <div class="cube" id="cube">
+          <section class="face front" data-face="front">
+            <div class="face-inner">
+              <p class="lens">How you feel</p>
+              <div class="feelings" id="feelings" role="group" aria-label="How you feel">
+                <button type="button" class="feeling" data-feeling="anxious">Anxious</button>
+                <button type="button" class="feeling" data-feeling="overwhelmed">Overwhelmed</button>
+                <button type="button" class="feeling" data-feeling="sad">Sad</button>
+                <button type="button" class="feeling" data-feeling="angry">Angry</button>
+                <button type="button" class="feeling" data-feeling="lonely">Lonely</button>
+                <button type="button" class="feeling" data-feeling="guilty">Guilty</button>
+                <button type="button" class="feeling" data-feeling="scared">Scared</button>
+                <button type="button" class="feeling" data-feeling="embarrassed">Embarrassed</button>
+              </div>
+              <div class="art" data-art hidden></div>
+              <p class="statement" data-statement hidden></p>
+            </div>
+          </section>
+          <section class="face right" data-face="right">
+            <div class="face-inner">
+              <p class="lens">Zoom out</p>
+              <div class="art" data-art></div>
+              <p class="statement waiting" data-statement>···</p>
+            </div>
+          </section>
+          <section class="face back" data-face="back">
+            <div class="face-inner">
+              <p class="lens">Another side</p>
+              <div class="art" data-art></div>
+              <p class="statement waiting" data-statement>···</p>
+            </div>
+          </section>
+          <section class="face left" data-face="left">
+            <div class="face-inner">
+              <p class="lens">Later</p>
+              <div class="art" data-art></div>
+              <p class="statement waiting" data-statement>···</p>
+            </div>
+          </section>
+          <section class="face top" data-face="top">
+            <div class="face-inner">
+              <p class="lens">From above</p>
+              <div class="art" data-art></div>
+              <p class="statement waiting" data-statement>···</p>
+            </div>
+          </section>
+          <section class="face bottom" data-face="bottom">
+            <div class="face-inner">
+              <p class="lens">Together</p>
+              <div class="art" data-art></div>
+              <p class="statement waiting" data-statement>···</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer class="controls">
+        <h1>Worry Free Cube</h1>
+        <p class="readout" aria-live="polite">Current angle: <span id="current-lens">Your feeling</span></p>
+        <div class="dots" role="group" aria-label="Cube faces">
+          <button type="button" class="dot" data-face="front" aria-label="Show Your feeling" aria-current="true"></button>
+          <button type="button" class="dot" data-face="right" aria-label="Show Zoom out"></button>
+          <button type="button" class="dot" data-face="back" aria-label="Show Another side"></button>
+          <button type="button" class="dot" data-face="left" aria-label="Show Later"></button>
+          <button type="button" class="dot" data-face="top" aria-label="Show From above"></button>
+          <button type="button" class="dot" data-face="bottom" aria-label="Show Together"></button>
+        </div>
+        <button type="button" class="again is-off" id="again">Reset</button>
+      </footer>
+    </main>
+
+<script>
+(function () {
+  const TILT_X = -16;
+  const TILT_Y = -22;
+  const DRAG = 0.9;
+  const SETTLE_MS = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 540;
+
+  const FACES = [
+    { id: "front", lens: "Your feeling", x: 0, y: 0, normal: [0, 0, 1] },
+    { id: "right", lens: "Zoom out", x: 0, y: -90, normal: [1, 0, 0] },
+    { id: "back", lens: "Another side", x: 0, y: 180, normal: [0, 0, -1] },
+    { id: "left", lens: "Later", x: 0, y: 90, normal: [-1, 0, 0] },
+    { id: "top", lens: "From above", x: -90, y: 0, normal: [0, -1, 0] },
+    { id: "bottom", lens: "Together", x: 90, y: 0, normal: [0, 1, 0] }
+  ];
+
+  const FACE_BY_ID = Object.fromEntries(FACES.map(function (face) { return [face.id, face]; }));
+
+  const widget = document.getElementById("widget");
+  const stage = document.getElementById("stage");
+  const cube = document.getElementById("cube");
+  const again = document.getElementById("again");
+  const feelingsBox = document.getElementById("feelings");
+  const feelingButtons = Array.from(document.querySelectorAll(".feeling"));
+  const lensLabel = document.getElementById("current-lens");
+  const dots = Array.from(document.querySelectorAll(".dot"));
+  const faceNodes = Array.from(document.querySelectorAll(".face"));
+  const frontLens = document.querySelector(".front .lens");
+  const statementNodes = Array.from(document.querySelectorAll("[data-statement]"));
+  const artNodes = Object.fromEntries(faceNodes.map(function (node) {
+    return [node.dataset.face, node.querySelector("[data-art]")];
+  }));
+
+  let rotX = TILT_X;
+  let rotY = TILT_Y;
+  let baseX = 0;
+  let baseY = 0;
+  let facingId = "front";
+  let pointerId = null;
+  let lastX = 0;
+  let lastY = 0;
+  let anim = 0;
+
+  const FEELINGS = {
+    anxious: {
+      label: "Anxious",
+      lines: {
+        front: "Up close, the fog makes it feel endless.",
+        right: "One peak in a long range. Near looks huge.",
+        back: "Breathe out slower than in. Take one step.",
+        left: "This peaks and passes, often in minutes.",
+        top: "Name three things you can see right now.",
+        bottom: "Tell someone, “I'm anxious.”"
+      }
+    },
+    overwhelmed: {
+      label: "Overwhelmed",
+      lines: {
+        front: "Up close, you can't even see the top.",
+        right: "From here it fits. Write down everything on your mind.",
+        back: "A slope, not a wall. Do the smallest next step.",
+        left: "Rest is part of the climb, not a break from it.",
+        top: "You don't have to go straight up. Drop one thing.",
+        bottom: "Ask for one specific kind of help."
+      }
+    },
+    sad: {
+      label: "Sad",
+      lines: {
+        front: "Up close, the rain hides everything.",
+        right: "One cloud over one peak. The range is still there.",
+        back: "Let yourself cry if it comes. That's how it moves.",
+        left: "Rain passes. Step outside for ten minutes.",
+        top: "Do one kind thing for your body: water, food, rest.",
+        bottom: "Sit with someone, even in silence."
+      }
+    },
+    angry: {
+      label: "Angry",
+      lines: {
+        front: "Up close, the storm is loud and urgent.",
+        right: "The storm is small and moving. It will pass.",
+        back: "Step away before you say or send anything.",
+        left: "Move hard for five minutes. Let the charge out.",
+        top: "Name the need the anger is guarding.",
+        bottom: "Tell someone, “I'm angry about this.”"
+      }
+    },
+    lonely: {
+      label: "Lonely",
+      lines: {
+        front: "Up close, it feels like you're the only one here.",
+        right: "Other peaks, other climbers. You're not the only one.",
+        back: "Send one small message to someone today.",
+        left: "This is a signal to reach out, not a verdict.",
+        top: "Go where people are, just to be near.",
+        bottom: "Someone would be glad to hear from you."
+      }
+    },
+    guilty: {
+      label: "Guilty",
+      lines: {
+        front: "Up close, the pack feels heavier than the climb.",
+        right: "One mistake is one step on a long trail.",
+        back: "Set the pack down. Name what you did, plainly.",
+        left: "Decide what you'd do differently next time.",
+        top: "Make one amend, or one concrete fix.",
+        bottom: "Say it to someone kind. Guilt shrinks when shared."
+      }
+    },
+    scared: {
+      label: "Scared",
+      lines: {
+        front: "Up close, the dark makes every shape a threat.",
+        right: "From far away, it's an ordinary peak.",
+        back: "Plant your feet. Feel the ground hold you.",
+        left: "Notice what is happening now, not what might.",
+        top: "Write down the worst case and one thing you'd do.",
+        bottom: "Call someone. Let them walk this part with you."
+      }
+    },
+    embarrassed: {
+      label: "Embarrassed",
+      lines: {
+        front: "Up close, it feels like a spotlight is on you.",
+        right: "From here, no one can even see you.",
+        back: "Everyone slips on this trail. Laugh if you can.",
+        left: "By next week, almost no one will remember.",
+        top: "Talk to yourself like a good friend would.",
+        bottom: "Tell someone. It loses its heat once shared."
+      }
+    }
+  };
+
+  const C = {
+    sky: "#efe2cf",
+    skyTop: "#e6d3bb",
+    rock: "#8a6f57",
+    shade: "#6f5845",
+    far: "#c9b59c",
+    mid: "#b49b80",
+    ground: "#d9c7ae",
+    ink: "#3c3026",
+    snow: "#f6eee3",
+    sun: "#e9b872",
+    pack: "#b0784c",
+    mist: "#f7efe4"
+  };
+
+  let PENCIL = "";
+
+  function pencil(content, kind) {
+    return '<g transform="rotate(-34 80 44)" filter="url(#' + PENCIL + "-" + (kind || "fill") + ')">' +
+      '<g transform="rotate(34 80 44)">' + content + "</g></g>";
+  }
+
+  function strokeSteps(src, seed, density) {
+    return '<feTurbulence type="fractalNoise" baseFrequency="0.07 1.3" numOctaves="2" seed="' + (seed + 5) + '" result="streak"/>' +
+      '<feColorMatrix in="streak" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 ' + density + '" result="streakA"/>' +
+      '<feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="' + (seed + 9) + '" result="tooth"/>' +
+      '<feColorMatrix in="tooth" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.4 0 0 0 0.25" result="toothA"/>' +
+      '<feComposite in="streakA" in2="toothA" operator="in" result="paperA"/>' +
+      '<feComposite in="' + src + '" in2="paperA" operator="in" result="drawn"/>';
+  }
+
+  function pencilDefs(id, seed) {
+    const box = ' filterUnits="userSpaceOnUse" x="-16" y="-40" width="192" height="168" color-interpolation-filters="sRGB"';
+    return "<defs>" +
+      '<filter id="' + id + '-fill"' + box + ">" +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="' + seed + '" result="jitter"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="jitter" scale="1.1" xChannelSelector="R" yChannelSelector="G" result="rough"/>' +
+        strokeSteps("rough", seed, -0.12) +
+        '<feMorphology in="rough" operator="erode" radius="0.32" result="core"/>' +
+        '<feComposite in="rough" in2="core" operator="out" result="rim"/>' +
+        '<feColorMatrix in="rim" type="matrix" values="0.62 0 0 0 0  0 0.6 0 0 0  0 0 0.58 0 0  0 0 0 0.85 0" result="rimDark"/>' +
+        '<feComposite in="rimDark" in2="toothA" operator="in" result="line"/>' +
+        '<feMerge><feMergeNode in="drawn"/><feMergeNode in="line"/></feMerge>' +
+      "</filter>" +
+      '<filter id="' + id + '-line"' + box + ">" +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="' + seed + '" result="jitter"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="jitter" scale="0.6" xChannelSelector="R" yChannelSelector="G" result="rough"/>' +
+        '<feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="' + (seed + 9) + '" result="tooth"/>' +
+        '<feColorMatrix in="tooth" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.2 0 0 0 0.4" result="toothA"/>' +
+        '<feComposite in="rough" in2="toothA" operator="in"/>' +
+      "</filter>" +
+      '<filter id="' + id + '-soft"' + box + ">" +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="' + seed + '" result="jitter"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="jitter" scale="1.6" xChannelSelector="R" yChannelSelector="G" result="rough"/>' +
+        strokeSteps("rough", seed, -0.28) +
+      "</filter>" +
+      "</defs>";
+  }
+
+  function skyFill(id, top, bottom) {
+    return '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + top + '" stop-opacity="0"/>' +
+      '<stop offset="0.5" stop-color="' + top + '"/><stop offset="1" stop-color="' + bottom + '"/>' +
+      "</linearGradient></defs>" + pencil(el("rect", { x: 0, y: 0, width: 160, height: 88, fill: "url(#" + id + ")" }), "soft");
+  }
+
+  function ground(y, color) {
+    return pencil(el("rect", { x: -6, y: y, width: 172, height: 94 - y, fill: color || C.ground }));
+  }
+
+  const PEAK = [[0, 1], [0.22, 0.52], [0.3, 0.58], [0.5, 0], [0.62, 0.3], [0.7, 0.24], [1, 1]];
+  const PEAK_SHADE = [[0.5, 0], [0.62, 0.3], [0.7, 0.24], [1, 1], [0.6, 1], [0.52, 0.45]];
+  const PEAK_SNOW = [[0.5, 0], [0.58, 0.2], [0.54, 0.17], [0.5, 0.22], [0.47, 0.17], [0.431, 0.2]];
+
+  function el(tag, attrs) {
+    return "<" + tag + Object.keys(attrs).map(function (key) {
+      const value = attrs[key];
+      return " " + key + '="' + (typeof value === "number" ? Math.round(value * 100) / 100 : value) + '"';
+    }).join("") + "/>";
+  }
+
+  function outline(list, cx, base, w, h) {
+    return list.map(function (p) {
+      return (Math.round((cx + (p[0] - 0.5) * w) * 10) / 10) + "," + (Math.round((base - (1 - p[1]) * h) * 10) / 10);
+    }).join(" ");
+  }
+
+  function peak(cx, base, w, h, tone) {
+    const t = tone || {};
+    return pencil(el("polygon", { points: outline(PEAK, cx, base, w, h), fill: t.rock || C.rock })) +
+      pencil(el("polygon", { points: outline(PEAK_SHADE, cx, base, w, h), fill: t.shade || C.shade })) +
+      pencil(el("polygon", { points: outline(PEAK_SNOW, cx, base, w, h), fill: t.snow || C.snow }));
+  }
+
+  function person(x, y, k, pack, color) {
+    const ink = color || C.ink;
+    let out = "";
+    if (pack) {
+      const pw = 1.5 * k * pack;
+      const ph = 2.5 * k * pack;
+      out += el("rect", { x: x - 0.6 * k - pw, y: y - 4.1 * k - ph / 2, width: pw, height: ph, rx: 0.5 * k, fill: C.pack });
+    }
+    out += el("line", { x1: x - 0.35 * k, y1: y - 2.2 * k, x2: x - 0.7 * k, y2: y, stroke: ink, "stroke-width": 0.75 * k, "stroke-linecap": "round" });
+    out += el("line", { x1: x + 0.35 * k, y1: y - 2.2 * k, x2: x + 0.7 * k, y2: y, stroke: ink, "stroke-width": 0.75 * k, "stroke-linecap": "round" });
+    out += el("rect", { x: x - 0.9 * k, y: y - 5.3 * k, width: 1.8 * k, height: 3.5 * k, rx: 0.8 * k, fill: ink });
+    out += el("circle", { cx: x, cy: y - 6.7 * k, r: 1.15 * k, fill: ink });
+    return out;
+  }
+
+  function cloud(cx, cy, k, color) {
+    return pencil(el("circle", { cx: cx - 6 * k, cy: cy + 1 * k, r: 4 * k, fill: color }) +
+      el("circle", { cx: cx, cy: cy - 1.5 * k, r: 5.5 * k, fill: color }) +
+      el("circle", { cx: cx + 6 * k, cy: cy + 0.5 * k, r: 4.5 * k, fill: color }) +
+      el("rect", { x: cx - 10 * k, y: cy, width: 20 * k, height: 4.5 * k, rx: 2.2 * k, fill: color }));
+  }
+
+  function frontScene(id, key) {
+    let top = null;
+    let bottom = null;
+    let tone = null;
+    let land = C.ground;
+    if (key === "sad") { top = "#cbc2b8"; bottom = "#e2d9ce"; }
+    if (key === "angry") { top = "#9a8371"; bottom = "#cdb59f"; }
+    if (key === "scared") {
+      top = "#37323f";
+      bottom = "#675b69";
+      tone = { rock: "#5c4b3f", shade: "#483a31", snow: "#d8cfc5" };
+      land = "#6f6052";
+    }
+    let out = top ? skyFill(id, top, bottom) : "";
+    if (key === "scared") {
+      let stars = "";
+      [[24, 40], [52, 33], [90, 36], [138, 44], [40, 50], [70, 44], [108, 46], [150, 52], [16, 54], [62, 56]].forEach(function (s) {
+        stars += el("circle", { cx: s[0], cy: s[1], r: 0.7, fill: C.snow });
+      });
+      out += pencil(stars, "line");
+      out += '<defs><mask id="' + id + '-moon"><rect x="0" y="0" width="160" height="88" fill="#fff"/>' + el("circle", { cx: 119, cy: 21, r: 5.4, fill: "#000" }) + "</mask></defs>";
+      out += pencil(el("circle", { cx: 116, cy: 23, r: 6, fill: C.snow, mask: "url(#" + id + "-moon)" }), "line");
+    }
+    out += peak(80, 88, 230, key === "overwhelmed" ? 150 : 72, tone);
+    out += ground(70, land);
+    if (key === "embarrassed") {
+      out += pencil(el("polygon", { points: "38,-2 54,-2 67,88 25,88", fill: "#fffaf2", opacity: 0.5 }) +
+        el("ellipse", { cx: 46, cy: 76.5, rx: 13, ry: 2.2, fill: "#fffaf2", opacity: 0.6 }), "soft");
+    }
+    out += pencil(key === "lonely" ? person(134, 75, 0.6, 0) : person(46, 76, 1.25, key === "guilty" ? 2.4 : 0), "line");
+    if (key === "anxious") {
+      let mist = "";
+      [[30, 36, 62, 7], [118, 27, 58, 6], [84, 52, 90, 6.5], [18, 60, 40, 4]].forEach(function (m) {
+        mist += el("ellipse", { cx: m[0], cy: m[1], rx: m[2], ry: m[3], fill: C.mist, opacity: 0.82 });
+      });
+      out += pencil(mist, "soft");
+    }
+    if (key === "sad") {
+      out += cloud(70, 24, 1.6, "#a99c8e");
+      let rain = "";
+      for (let i = 0; i < 10; i++) {
+        const x = 54 + i * 4;
+        const y = 34 + (i % 3) * 5;
+        rain += el("line", { x1: x, y1: y, x2: x - 1.5, y2: y + 7, stroke: "#8c7f71", "stroke-width": 0.7, "stroke-linecap": "round" });
+      }
+      out += pencil(rain, "line");
+    }
+    if (key === "angry") {
+      out += cloud(54, 20, 1.1, "#6b5748") + cloud(98, 24, 1.6, "#5a4739");
+      out += pencil(el("polyline", { points: "100,32 94,44 100,44 92,58", fill: "none", stroke: C.sun, "stroke-width": 1.8, "stroke-linejoin": "round", "stroke-linecap": "round" }), "line");
+    }
+    if (key === "lonely") {
+      out += pencil(el("path", { d: "M34 28 q3 -3 6 0 q3 -3 6 0", fill: "none", stroke: C.ink, "stroke-width": 0.7, "stroke-linecap": "round" }), "line");
+    }
+    return out;
+  }
+
+  function farScene(id, pack) {
+    return pencil(el("circle", { cx: 132, cy: 18, r: 7, fill: C.sun })) +
+      pencil(el("polygon", { points: "0,64 0,52 10,44 20,50 30,41 42,50 54,46 66,52 98,50 112,40 124,48 136,42 148,47 160,44 160,64", fill: C.far })) +
+      pencil(el("polygon", { points: "6,64 22,50 34,56 46,48 62,64", fill: C.mid })) +
+      pencil(el("polygon", { points: "94,64 108,47 118,53 128,45 146,64", fill: C.mid })) +
+      peak(78, 64, 48, 30) +
+      ground(62) +
+      pencil(person(104, 67, 0.5, pack), "line");
+  }
+
+  function sideScene(id, pack) {
+    return cloud(130, 22, 0.8, C.far) +
+      peak(100, 78, 200, 50) +
+      ground(74) +
+      pencil(el("polyline", { points: "34,75 72,71 46,65 82,59 70,52 90,45 88,39 99,30", fill: "none", stroke: C.snow, "stroke-width": 1.1, "stroke-dasharray": "1.4 1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }), "line") +
+      pencil(person(28, 76, 1, pack), "line");
+  }
+
+  function laterScene(id, pack) {
+    return skyFill(id, "#f2d3ae", "#f6dcbc") +
+      pencil(el("circle", { cx: 110, cy: 50, r: 30, fill: C.sun, opacity: 0.2 }) +
+        el("circle", { cx: 110, cy: 50, r: 19, fill: C.sun, opacity: 0.3 }), "soft") +
+      pencil(el("circle", { cx: 110, cy: 50, r: 12, fill: C.sun })) +
+      peak(68, 74, 116, 54) +
+      ground(70) +
+      pencil(person(34, 73, 1, pack), "line");
+  }
+
+  function aboveScene(id, pack) {
+    let out = '<g transform="rotate(-8 88 40)">';
+    [[86, 42, 72, 34, "#cdb99f"], [88, 40, 56, 26, C.mid], [89, 39, 40, 19, "#9c8268"], [90, 38, 26, 12, C.rock], [91, 37, 11, 5.5, C.snow]].forEach(function (r) {
+      out += pencil(el("ellipse", { cx: r[0], cy: r[1], rx: r[2], ry: r[3], fill: r[4], stroke: C.shade, "stroke-opacity": 0.35, "stroke-width": 0.5 }));
+    });
+    out += "</g>";
+    let trail = el("path", { d: "M6 80 C 24 70, 22 60, 42 58 S 62 52, 66 46 S 82 40, 90 37", fill: "none", stroke: C.ink, "stroke-width": 0.9, "stroke-dasharray": "1.2 2", "stroke-linecap": "round", opacity: 0.75 });
+    trail += el("ellipse", { cx: 43, cy: 59.6, rx: 3, ry: 1.2, fill: C.ink, opacity: 0.2 });
+    if (pack) trail += el("circle", { cx: 40.4, cy: 59.2, r: 1.2 + pack, fill: C.pack });
+    trail += el("circle", { cx: 42, cy: 58, r: 2.2, fill: C.ink });
+    return out + pencil(trail, "line");
+  }
+
+  function togetherScene(id, pack) {
+    return pencil(el("circle", { cx: 30, cy: 18, r: 6, fill: C.sun })) +
+      peak(104, 70, 132, 58) +
+      ground(66) +
+      pencil(person(40, 75, 1.15, pack) + person(48.5, 75, 1.15, 0, "#6a5646"), "line");
+  }
+
+  function scene(faceId, key) {
+    const id = "wfc-sky-" + faceId;
+    const pack = key === "guilty" ? 1.1 : 0;
+    const seed = FACES.findIndex(function (face) { return face.id === faceId; }) * 11 + 3;
+    PENCIL = id;
+    let body = "";
+    if (faceId === "front") body = frontScene(id, key);
+    else if (faceId === "right") body = farScene(id, pack);
+    else if (faceId === "back") body = sideScene(id, pack);
+    else if (faceId === "left") body = laterScene(id, pack);
+    else if (faceId === "top") body = aboveScene(id, pack);
+    else body = togetherScene(id, pack);
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 88" width="640" height="352">' + pencilDefs(id, seed) + body + "</svg>";
+  }
+
+  function paintArt(key) {
+    FACES.forEach(function (face) {
+      const img = new Image();
+      img.alt = "";
+      img.decoding = "async";
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(scene(face.id, key));
+      artNodes[face.id].replaceChildren(img);
+    });
+  }
+
+  function applyTransform() {
+    cube.style.transform = "rotateX(" + rotX + "deg) rotateY(" + rotY + "deg)";
+    relight();
+  }
+
+  function rotateVector(v, rxDeg, ryDeg) {
+    const rx = rxDeg * Math.PI / 180;
+    const ry = ryDeg * Math.PI / 180;
+    const cx = Math.cos(rx);
+    const sx = Math.sin(rx);
+    const cy = Math.cos(ry);
+    const sy = Math.sin(ry);
+    const x1 = cy * v[0] + sy * v[2];
+    const y1 = v[1];
+    const z1 = -sy * v[0] + cy * v[2];
+    return [x1, cx * y1 - sx * z1, sx * y1 + cx * z1];
+  }
+
+  function facingFace(rx, ry) {
+    let best = FACES[0];
+    let score = -Infinity;
+    for (let i = 0; i < FACES.length; i++) {
+      const z = rotateVector(FACES[i].normal, rx, ry)[2];
+      if (z > score) {
+        score = z;
+        best = FACES[i];
+      }
+    }
+    return best;
+  }
+
+  function faceContentDown(faceId) {
+    if (faceId === "back") return rotateVector([0, 1, 0], 0, 180);
+    if (faceId === "right") return rotateVector([0, 1, 0], 0, 90);
+    if (faceId === "left") return rotateVector([0, 1, 0], 0, -90);
+    if (faceId === "top") return rotateVector([0, 1, 0], 90, 0);
+    if (faceId === "bottom") return rotateVector([0, 1, 0], -90, 0);
+    return [0, 1, 0];
+  }
+
+  function textIsUpright(faceId, rx, ry) {
+    const down = rotateVector(faceContentDown(faceId), rx, ry);
+    return down[1] > 0.55 && Math.abs(down[0]) < 0.55;
+  }
+
+  function nearestStep(value, step) {
+    return Math.round(value / step) * step;
+  }
+
+  function settleBases(fromX, fromY) {
+    const bx = nearestStep(fromX - TILT_X, 90);
+    const by = nearestStep(fromY - TILT_Y, 90);
+    const face = facingFace(bx + TILT_X, by + TILT_Y);
+    if (!textIsUpright(face.id, bx + TILT_X, by + TILT_Y)) {
+      return { x: face.x, y: face.y };
+    }
+    return { x: bx, y: by };
+  }
+
+  function closestAngle(current, target) {
+    let t = target;
+    while (t - current > 180) t -= 360;
+    while (current - t > 180) t += 360;
+    return t;
+  }
+
+  function updateFacing() {
+    const face = facingFace(rotX, rotY);
+    if (face.id === facingId) return;
+    facingId = face.id;
+    lensLabel.textContent = face.lens;
+    dots.forEach(function (dot) {
+      if (dot.dataset.face === face.id) dot.setAttribute("aria-current", "true");
+      else dot.removeAttribute("aria-current");
+    });
+    faceNodes.forEach(function (node) {
+      node.setAttribute("aria-hidden", node.dataset.face === face.id ? "false" : "true");
+    });
+  }
+
+  function goTo(nextBaseX, nextBaseY) {
+    baseX = closestAngle(rotX - TILT_X, nextBaseX);
+    baseY = closestAngle(rotY - TILT_Y, nextBaseY);
+    const destX = baseX + TILT_X;
+    const destY = baseY + TILT_Y;
+    if (anim) cancelAnimationFrame(anim);
+    if (SETTLE_MS === 0 || Math.abs(destX - rotX) + Math.abs(destY - rotY) < 0.6) {
+      rotX = destX;
+      rotY = destY;
+      applyTransform();
+      updateFacing();
+      placeShadow();
+      anim = 0;
+      return;
+    }
+    const startX = rotX;
+    const startY = rotY;
+    const t0 = performance.now();
+    const step = function (now) {
+      const t = Math.min(1, (now - t0) / SETTLE_MS);
+      const e = 1 - Math.pow(1 - t, 3);
+      rotX = startX + (destX - startX) * e;
+      rotY = startY + (destY - startY) * e;
+      applyTransform();
+      updateFacing();
+      if (t < 1) anim = requestAnimationFrame(step);
+      else {
+        anim = 0;
+        placeShadow();
+      }
+    };
+    anim = requestAnimationFrame(step);
+  }
+
+  function showPick() {
+    widget.classList.remove("is-revealing");
+    widget.classList.add("is-picking");
+    feelingsBox.hidden = false;
+    artNodes.front.hidden = true;
+    frontLens.textContent = "How you feel";
+    again.classList.add("is-off");
+    paintArt(null);
+    statementNodes.forEach(function (node, index) {
+      node.style.fontSize = "";
+      if (index === 0) {
+        node.hidden = true;
+        node.textContent = "";
+      } else {
+        node.textContent = "···";
+        node.classList.add("waiting");
+      }
+    });
+    goTo(0, 0);
+    requestAnimationFrame(fitPills);
+  }
+
+  function fitPills() {
+    feelingsBox.style.fontSize = "";
+    if (feelingsBox.hidden) return;
+    let size = parseFloat(getComputedStyle(feelingsBox).fontSize);
+    const min = widget.classList.contains("is-tiny") ? 8.5 : 9;
+    while (size > min && feelingsBox.scrollHeight > feelingsBox.clientHeight + 1) {
+      size = Math.max(min, size - 0.5);
+      feelingsBox.style.fontSize = size + "px";
+    }
+  }
+
+  function fitFaceText(node) {
+    node.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(node).fontSize);
+    const min = Math.max(widget.classList.contains("is-tiny") ? 9.5 : 11, size * 0.45);
+    while (size > min && node.scrollHeight > node.clientHeight + 1) {
+      size = Math.max(min, size * 0.88);
+      node.style.fontSize = size + "px";
+      if (size === min) break;
+    }
+  }
+
+  const FIT_POSES = [
+    [-16, -22],
+    [0, 0], [0, 90], [0, 180], [0, -90], [90, 0], [-90, 0],
+    [35.26, 45], [35.26, -45], [-35.26, 45], [-35.26, -45],
+    [35.26, 135], [-35.26, 135]
+  ];
+
+  function faceBounds() {
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    cube.querySelectorAll(".face, .bound").forEach(function (node) {
+      const rect = node.getBoundingClientRect();
+      left = Math.min(left, rect.left);
+      top = Math.min(top, rect.top);
+      right = Math.max(right, rect.right);
+      bottom = Math.max(bottom, rect.bottom);
+    });
+    return { left: left, top: top, right: right, bottom: bottom };
+  }
+
+  function poseFits(size) {
+    document.documentElement.style.setProperty("--s", size + "px");
+    const room = stage.getBoundingClientRect();
+    const pad = 6;
+    for (let i = 0; i < FIT_POSES.length; i++) {
+      cube.style.transform = "rotateX(" + FIT_POSES[i][0] + "deg) rotateY(" + FIT_POSES[i][1] + "deg)";
+      const box = faceBounds();
+      if (box.left < room.left + pad || box.top < room.top + pad || box.right > room.right - pad || box.bottom > room.bottom - pad) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function fitCube() {
+    const room = stage.getBoundingClientRect();
+    let lo = 72;
+    let hi = Math.max(lo, Math.min(room.width, room.height));
+    let best = lo;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      if (poseFits(mid)) {
+        best = mid;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    document.documentElement.style.setProperty("--s", (Math.floor(best * 10) / 10) + "px");
+    widget.classList.toggle("is-compact", best < 230);
+    widget.classList.toggle("is-tiny", best < 180);
+    applyTransform();
+    placeShadow();
+    statementNodes.forEach(function (node) {
+      if (!node.hidden && node.textContent && node.textContent !== "···") fitFaceText(node);
+    });
+    fitPills();
+  }
+
+  function placeShadow() {
+    const shadow = document.querySelector(".shadow");
+    const stageRect = stage.getBoundingClientRect();
+    const box = faceBounds();
+    const width = Math.max(56, (box.right - box.left) * 0.58);
+    const height = Math.max(18, width * 0.22);
+    const cx = (box.left + box.right) / 2 - stageRect.left;
+    let top = box.bottom - stageRect.top - height * 0.35;
+    top = Math.max(0, Math.min(top, stageRect.height - height));
+    shadow.style.width = width + "px";
+    shadow.style.height = height + "px";
+    shadow.style.left = cx + "px";
+    shadow.style.top = top + "px";
+  }
+  let fitQueued = false;
+  function queueFit() {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(function () {
+      fitQueued = false;
+      fitCube();
+    });
+  }
+
+  function showFeeling(key) {
+    const feeling = FEELINGS[key];
+    if (!feeling) return;
+    widget.classList.remove("is-picking", "is-revealing");
+    void widget.offsetWidth;
+    widget.classList.add("is-revealing");
+    feelingsBox.hidden = true;
+    artNodes.front.hidden = false;
+    frontLens.textContent = "Your feeling";
+    again.classList.remove("is-off");
+    paintArt(key);
+    statementNodes.forEach(function (node) {
+      const faceId = node.closest(".face").dataset.face;
+      node.hidden = false;
+      node.classList.remove("waiting");
+      node.style.fontSize = "";
+      node.textContent = (faceId === "front" ? "I feel " + feeling.label.toLowerCase() + ". " : "") + feeling.lines[faceId];
+    });
+    requestAnimationFrame(function () {
+      statementNodes.forEach(fitFaceText);
+    });
+    goTo(0, 0);
+  }
+
+  feelingButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      showFeeling(button.dataset.feeling);
+    });
+  });
+
+  again.addEventListener("click", function () {
+    showPick();
+    feelingButtons[0].focus({ preventScroll: true });
+  });
+
+  dots.forEach(function (dot) {
+    dot.addEventListener("click", function () {
+      const face = FACE_BY_ID[dot.dataset.face];
+      goTo(face.x, face.y);
+    });
+  });
+
+  stage.addEventListener("pointerdown", function (event) {
+    if (event.target.closest("button")) return;
+    if (pointerId !== null) return;
+    pointerId = event.pointerId;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    if (anim) cancelAnimationFrame(anim);
+    anim = 0;
+    stage.classList.add("is-dragging");
+    try { stage.setPointerCapture(event.pointerId); } catch (err) {}
+  });
+
+  stage.addEventListener("pointermove", function (event) {
+    if (event.pointerId !== pointerId) return;
+    const dx = event.clientX - lastX;
+    const dy = event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    rotY += dx * DRAG;
+    rotX -= dy * DRAG;
+    baseX = rotX - TILT_X;
+    baseY = rotY - TILT_Y;
+    applyTransform();
+    updateFacing();
+    event.preventDefault();
+  }, { passive: false });
+
+  function endDrag(event) {
+    if (event.pointerId !== pointerId) return;
+    pointerId = null;
+    stage.classList.remove("is-dragging");
+    const settled = settleBases(rotX, rotY);
+    goTo(settled.x, settled.y);
+  }
+
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+
+
+  const ROUND = 0.17;
+  const body3d = (function () {
+    const canvas = document.createElement("canvas");
+    canvas.className = "body3d";
+    canvas.setAttribute("aria-hidden", "true");
+    const gl = canvas.getContext("webgl", { antialias: true, alpha: true, premultipliedAlpha: true });
+    if (!gl) return null;
+
+    const VERT = [
+      "attribute vec3 aPos;",
+      "attribute vec3 aNor;",
+      "uniform mat3 uRot;",
+      "uniform float uS;",
+      "uniform float uD;",
+      "uniform vec2 uHalf;",
+      "uniform vec2 uOff;",
+      "varying vec3 vN;",
+      "void main() {",
+      "  vec3 p = uRot * (aPos * uS);",
+      "  vN = uRot * aNor;",
+      "  float w = (uD - p.z) / uD;",
+      "  vec2 xy = (uOff + p.xy) / uHalf;",
+      "  gl_Position = vec4(xy.x, -xy.y, (-p.z / (2.0 * uS)) * w, w);",
+      "}"
+    ].join("\n");
+    const FRAG = [
+      "precision mediump float;",
+      "varying vec3 vN;",
+      "uniform vec3 uL;",
+      "uniform vec3 uH;",
+      "void main() {",
+      "  vec3 n = normalize(vN);",
+      "  float d = dot(n, uL);",
+      "  float wrap = clamp((d + 0.5) / 1.5, 0.0, 1.0);",
+      "  float t = 0.1 + 0.9 * wrap * wrap * (3.0 - 2.0 * wrap);",
+      "  float bounce = max(0.0, n.y) * 0.08;",
+      "  float spec = pow(max(0.0, dot(n, uH)), 28.0) * 0.28;",
+      "  vec3 dark = vec3(0.68, 0.58, 0.47);",
+      "  vec3 lit = vec3(0.995, 0.968, 0.92);",
+      "  vec3 c = mix(dark, lit, t) + vec3(0.05, 0.035, 0.02) * bounce;",
+      "  c = mix(c, vec3(1.0), spec);",
+      "  gl_FragColor = vec4(c, 1.0);",
+      "}"
+    ].join("\n");
+
+    function compile(type, src) {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      return gl.getShaderParameter(sh, gl.COMPILE_STATUS) ? sh : null;
+    }
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) return null;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+    gl.useProgram(prog);
+
+    const h = 0.5;
+    const flat = h - ROUND;
+    const BAND = 12;
+    const ticks = [];
+    for (let k = 0; k <= BAND; k++) ticks.push(-h + ROUND * k / BAND);
+    for (let k = 0; k <= BAND; k++) ticks.push(flat + ROUND * k / BAND);
+    const n = ticks.length;
+    const pos = [];
+    const nor = [];
+    const idx = [];
+    [[2, 1], [2, -1], [0, 1], [0, -1], [1, 1], [1, -1]].forEach(function (f) {
+      const a = f[0];
+      const sg = f[1];
+      const b = (a + 1) % 3;
+      const c = (a + 2) % 3;
+      const base = pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          const pt = [0, 0, 0];
+          pt[a] = sg * h;
+          pt[b] = ticks[i];
+          pt[c] = ticks[j];
+          const core = pt.map(function (v) { return Math.max(-flat, Math.min(flat, v)); });
+          const dx = pt[0] - core[0];
+          const dy = pt[1] - core[1];
+          const dz = pt[2] - core[2];
+          const len = Math.hypot(dx, dy, dz) || 1;
+          const nx = dx / len;
+          const ny = dy / len;
+          const nz = dz / len;
+          pos.push(core[0] + ROUND * nx, core[1] + ROUND * ny, core[2] + ROUND * nz);
+          nor.push(nx, ny, nz);
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        for (let j = 0; j < n - 1; j++) {
+          const q = base + i * n + j;
+          idx.push(q, q + n, q + 1, q + 1, q + n, q + n + 1);
+        }
+      }
+    });
+
+    function buffer(target, data) {
+      const buf = gl.createBuffer();
+      gl.bindBuffer(target, buf);
+      gl.bufferData(target, data, gl.STATIC_DRAW);
+      return buf;
+    }
+    buffer(gl.ARRAY_BUFFER, new Float32Array(pos));
+    const aPos = gl.getAttribLocation(prog, "aPos");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+    buffer(gl.ARRAY_BUFFER, new Float32Array(nor));
+    const aNor = gl.getAttribLocation(prog, "aNor");
+    gl.enableVertexAttribArray(aNor);
+    gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, 0, 0);
+    buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx));
+    const count = idx.length;
+
+    const u = {};
+    ["uRot", "uS", "uD", "uHalf", "uOff", "uL", "uH"].forEach(function (name) {
+      u[name] = gl.getUniformLocation(prog, name);
+    });
+    const light = [-0.5, -0.78, 0.5];
+    const ll = Math.hypot(light[0], light[1], light[2]);
+    const L = light.map(function (v) { return v / ll; });
+    const half = [L[0], L[1], L[2] + 1];
+    const hl = Math.hypot(half[0], half[1], half[2]);
+    gl.uniform3f(u.uL, L[0], L[1], L[2]);
+    gl.uniform3f(u.uH, half[0] / hl, half[1] / hl, half[2] / hl);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LESS);
+    gl.clearColor(0, 0, 0, 0);
+
+    let frame = 0;
+    function draw() {
+      frame = 0;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = stage.clientWidth + 128;
+      const hgt = stage.clientHeight + 128;
+      const pw = Math.round(w * dpr);
+      const ph = Math.round(hgt * dpr);
+      if (canvas.width !== pw || canvas.height !== ph) {
+        canvas.width = pw;
+        canvas.height = ph;
+      }
+      gl.viewport(0, 0, pw, ph);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const size = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--s")) || cube.offsetWidth;
+      const rx = rotX * Math.PI / 180;
+      const ry = rotY * Math.PI / 180;
+      const cx = Math.cos(rx);
+      const sx = Math.sin(rx);
+      const cy = Math.cos(ry);
+      const sy = Math.sin(ry);
+      gl.uniformMatrix3fv(u.uRot, false, [cy, sx * sy, -cx * sy, 0, cx, sx, sy, -sx * cy, cx * cy]);
+      gl.uniform1f(u.uS, size);
+      gl.uniform1f(u.uD, size * 4);
+      gl.uniform2f(u.uHalf, w / 2, hgt / 2);
+      gl.uniform2f(u.uOff, cube.offsetLeft + cube.offsetWidth / 2 + 64 - w / 2, cube.offsetTop + cube.offsetHeight / 2 + 64 - hgt / 2);
+      gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+    }
+
+    return {
+      canvas: canvas,
+      request: function () {
+        if (!frame) frame = requestAnimationFrame(draw);
+      },
+      now: draw
+    };
+  })();
+
+  function relight() {
+    if (body3d) body3d.request();
+  }
+
+  function buildSoftShell() {
+    const shell = document.createElement("div");
+    shell.className = "shell";
+    shell.setAttribute("aria-hidden", "true");
+
+    function marker(x, y, z) {
+      const node = document.createElement("div");
+      node.className = "bound";
+      node.style.transform = "translate3d(calc(" + x + "), calc(" + y + "), calc(" + z + "))";
+      shell.appendChild(node);
+    }
+
+    const half = "(var(--s) / 2)";
+    const bulge = "(var(--s) / 2 - var(--r) * 0.3)";
+    const reach = "(var(--s) / 2 - var(--r) * 0.42)";
+    [-1, 1].forEach(function (a) {
+      [-1, 1].forEach(function (b) {
+        marker("0px", a + " * " + bulge, b + " * " + bulge);
+        marker(a + " * " + bulge, "0px", b + " * " + bulge);
+        marker(a + " * " + bulge, b + " * " + bulge, "0px");
+        [-1, 1].forEach(function (c) {
+          marker(a + " * " + reach, b + " * " + reach, c + " * " + reach);
+        });
+      });
+    });
+    marker(half, "0px", "0px");
+    marker("-1 * " + half, "0px", "0px");
+    marker("0px", half, "0px");
+    marker("0px", "-1 * " + half, "0px");
+    marker("0px", "0px", half);
+    marker("0px", "0px", "-1 * " + half);
+    cube.appendChild(shell);
+
+    if (body3d) {
+      stage.insertBefore(body3d.canvas, cube);
+      widget.classList.add("has-body");
+    } else {
+      widget.classList.add("no-body");
+    }
+  }
+
+  faceNodes.forEach(function (node) {
+    node.setAttribute("aria-hidden", node.dataset.face === "front" ? "false" : "true");
+  });
+  paintArt(null);
+  buildSoftShell();
+  applyTransform();
+  fitCube();
+  window.addEventListener("resize", queueFit);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", queueFit);
+  if (window.ResizeObserver) new ResizeObserver(queueFit).observe(stage);
+})();
+</script>
+</body>
+</html>

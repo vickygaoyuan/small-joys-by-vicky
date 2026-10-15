@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Small Joys by Vicky</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #000;
+    color: #fff;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    padding: 48px 32px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+  }
+  header {
+    max-width: 1000px;
+    margin: 0 auto 40px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 500;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: -0.06em;
+  }
+  .subtitle {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #aaa;
+  }
+  a { color: inherit; text-decoration: none; display: block; }
+  .preview {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 24px;
+    background: #111;
+    transition: transform .2s ease;
+  }
+  a:hover .preview { transform: scale(1.02); }
+  .text { padding-top: 12px; }
+  .preview iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 768px;
+    height: 1024px;
+    border: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+  /* Touch devices keep frames as tap-to-open previews so swipes still scroll the page. */
+  @media (hover: hover) and (pointer: fine) {
+    .preview iframe { pointer-events: auto; }
+    a:hover .preview { transform: none; }
+    a.name:hover { text-decoration: underline; }
+  }
+  .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #fff;
+  }
+  .name svg {
+    width: 12px;
+    height: 12px;
+    color: #aaa;
+  }
+  .name:hover svg { color: #fff; }
+  .description {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Small Joys by Vicky</h1>
+  <p class="subtitle">A playground where I am having fun making things</p>
+</header>
+<main class="grid" id="grid"></main>
+<script>
+  const projects = [
+    {
+      name: "Bubble Bursting",
+      url: "bubble-bursting/index.html",
+      description: "Blow bubbles in a dreamy space, and then watch them burst.",
+    },
+    {
+      name: "Frying Egg",
+      url: "frying-egg/index.html",
+      description: "Nothing beats a perfectly cooked egg. Now a tiny fryer lets me chase that satisfaction anytime.",
+    },
+    {
+      name: "Baby Size Wheel",
+      url: "baby-size-wheel/index.html",
+      description: "A pregnancy wheel that answers this most critical question: how big is my baby now?",
+    },
+    {
+      name: "Tally Counter",
+      url: "tally-counter/index.html",
+      description: "Tally marks went digital, cuz counting with numbers is boring, isn't it?",
+    },
+    {
+      name: "Worry Free Cube",
+      url: "Worry-free-cube/index.html",
+      description: "Every feeling looks different from another angle. Pick what you feel and turn the cube to find a new way through.",
+    },
+  ];
+
+  const previewVersion = Date.now();
+  const cards = projects.map((p) => {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `
+      <a href="${p.url}" aria-label="${p.name}">
+        <div class="preview">
+          <iframe src="${p.url}?v=${previewVersion}" loading="lazy" title="${p.name}"></iframe>
+        </div>
+      </a>
+      <div class="text">
+        <a class="name" href="${p.url}">${p.name}<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2h6v6M10 2 2 10"/></svg></a>
+        ${p.description ? `<p class="description">${p.description}</p>` : ""}
+      </div>`;
+    return card;
+  });
+
+  const fit = (preview) => {
+    preview.querySelector("iframe").style.transform =
+      `scale(${preview.clientWidth / 768})`;
+  };
+  const ro = new ResizeObserver((entries) => entries.forEach((e) => fit(e.target)));
+  cards.forEach((card) => ro.observe(card.querySelector(".preview")));
+
+  // Each project pauses its own audio on these messages, so sound only plays while hovered.
+  for (const card of cards) {
+    const preview = card.querySelector(".preview");
+    const frame = preview.querySelector("iframe");
+    const send = (active) => frame.contentWindow?.postMessage({ type: "gallery-audio", active }, "*");
+    preview.addEventListener("mouseenter", () => send(true));
+    preview.addEventListener("mouseleave", () => send(false));
+  }
+
+  document.getElementById("grid").append(...cards);
+</script>
+</body>
+</html>
