@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>A Timer Without Numbers</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: #F1E6D3;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #8A7F6A;
+    -webkit-font-smoothing: antialiased;
+  }
+  #view {
+    position: fixed;
+    inset: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: ns-resize;
+  }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  .readout {
+    position: fixed;
+    left: 0; right: 0;
+    top: 16%;
+    z-index: 1;
+    text-align: center;
+    font-size: clamp(40px, 7vmin, 76px);
+    font-weight: 300;
+    letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    /* Fixed line box so instructions and the timer share the same centre line. */
+    height: calc(clamp(40px, 7vmin, 76px) * 1.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5vw;
+  }
+  .readout { opacity: 0; transition: color .35s ease, opacity .45s ease; }
+  .readout.show { opacity: 1; }
+  .on-light { color: #15130F; }
+  .on-dark { color: #FFFFFF; }
+  /* White copy of the numeral, clipped to the sun's disc on screen. */
+  #readoutSun { z-index: 2; color: #FFFFFF; transition: none; clip-path: circle(0px at 0px 0px); }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="view"></div>
+<div class="readout on-light" id="readout" aria-live="polite"></div>
+<div class="readout" id="readoutSun" aria-hidden="true"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const MAX = 1200;
+const view = document.getElementById('view');
+const readout = document.getElementById('readout');
+const readoutSun = document.getElementById('readoutSun');
+
+// While a press is held on a hidden sun, it rises this many seconds' worth into view and the time shows.
+const PEEK = 15;
+
+/* ---------- utilities ---------- */
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const ease = (rate, dt) => 1 - Math.exp(-rate * dt);
+const DEG = Math.PI / 180;
+/* ---------- audio ---------- */
+let ac = null, master = null, audioPrimed = false, galleryActive = true;
+const MASTER_GAIN = 0.9;
+// When embedded in the gallery, stay silent unless the mouse is over this preview.
+addEventListener('message', (e) => {
+  if (e.source !== window.parent || !e.data || e.data.type !== 'gallery-audio') return;
+  galleryActive = !!e.data.active;
+  if (master) master.gain.value = galleryActive ? MASTER_GAIN : 0;
+});
+// iOS mutes Web Audio under the silent switch unless the session is declared as playback.
+if (navigator.audioSession) { try { navigator.audioSession.type = 'playback'; } catch (e) {} }
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ac = new AC();
+    master = ac.createGain();
+    master.gain.value = galleryActive ? MASTER_GAIN : 0;
+    master.connect(ac.destination);
+  }
+  if (ac.state !== 'running') ac.resume().catch(() => {});
+}
+// Mobile browsers only unlock audio inside a real gesture (touchend / click, not touch-pointerdown),
+// and iOS needs a sound started in that gesture before oscillators are heard.
+function unlockAudio() {
+  ensureAudio();
+  if (!ac) return;
+  if (!audioPrimed || ac.state !== 'running') {
+    const src = ac.createBufferSource();
+    src.buffer = ac.createBuffer(1, 1, 22050);
+    src.connect(ac.destination);
+    src.start(0);
+    audioPrimed = ac.state === 'running';
+  }
+}
+for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown']) {
+  window.addEventListener(ev, unlockAudio, { capture: true, passive: true });
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ac && ac.state !== 'running') ac.resume().catch(() => {});
+});
+function tone(freq, gain, decay, delay = 0, attack = 0.004) {
+  if (!ac) return;
+  if (ac.state !== 'running') ac.resume().catch(() => {});
+  const t = ac.currentTime + 0.005 + delay;
+  const o = ac.createOscillator(), v = ac.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  v.gain.setValueAtTime(0.0001, t);
+  v.gain.exponentialRampToValueAtTime(gain, t + attack);
+  v.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+  o.connect(v); v.connect(master);
+  o.start(t); o.stop(t + decay + 0.05);
+}
+// rounded, low and slow-attacked so nothing clicks
+const sound = {
+  tick: () => { tone(740, 0.028, 0.16, 0, 0.012); tone(1110, 0.006, 0.1, 0, 0.012); },
+  glow: () => {
+    tone(392, 0.15, 5.0, 0, 0.35);
+    tone(587.3, 0.07, 4.4, 0.08, 0.45);
+    tone(784, 0.035, 3.8, 0.16, 0.5);
+    tone(393.2, 0.06, 5.0, 0, 0.4);
+  },
+};
+
+/* ---------- renderer ---------- */
+let W = window.innerWidth, H = window.innerHeight;
+let pixelRatio = Math.min(2, Math.max(1.5, window.devicePixelRatio || 1));
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(pixelRatio);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setSize(W, H);
+view.appendChild(renderer.domElement);
+
+// Multisampled HDR target so post-processing keeps antialiased edges.
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 }));
+composer.setPixelRatio(pixelRatio);
+const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.6, 0.8);
+composer.addPass(renderPass);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+let bloomOn = true;
+
+/* ================= Sun (after a Bauhaus poster) ================= */
+function makeSun() {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 400);
+  // Camera looks dead level, so the plane y = CAMY always projects onto the screen's horizontal midline.
+  const CAMY = 2, CAMZ = 10;
+  const base = new THREE.Vector3(0, CAMY, CAMZ);
+  const look = new THREE.Vector3(0, CAMY, CAMZ - 30);
+  const KEYS = [
+    [0.00, '#1F1D2B', '#3A2E40', '#7A3F35'],
+    [0.12, '#5B4A5E', '#B9705A', '#E39A6A'],
+    [0.45, '#E4D3B8', '#EFD9BA', '#F1C99A'],
+    [1.00, '#F2E9D8', '#F2E7D3', '#F0E0C4'],
+  ].map(([a, t, m, h]) => ({ a, t: new THREE.Color(t), m: new THREE.Color(m), h: new THREE.Color(h) }));
+
+  const skyGroup = new THREE.Group();
+  scene.add(skyGroup);
+  const skyU = {
+    uTop: { value: new THREE.Color() },
+    uMid: { value: new THREE.Color() },
+    uHor: { value: new THREE.Color() },
+    // afterglow left on the horizon where the sun went down; shared with the waves' light stripes
+    uGlowCol: { value: new THREE.Color('#F6B57E') },
+    uGlowK: { value: 0 },
+    uTanH: { value: Math.tan(20 * DEG) },
+    uAspect: { value: W / H },
+  };
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(150, 64, 32),
+    new THREE.ShaderMaterial({
+      uniforms: skyU,
+      side: THREE.BackSide,
+      depthWrite: false,
+      vertexShader: `
+        varying vec3 vDir;
+        void main() {
+          vDir = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 uTop, uMid, uHor, uGlowCol;
+        uniform float uGlowK, uTanH, uAspect;
+        varying vec3 vDir;
+        void main() {
+          vec3 d = normalize(vDir);
+          float h = d.y;
+          vec3 c = mix(uHor, uMid, smoothstep(0.0, 0.2, h));
+          c = mix(c, uTop, smoothstep(0.15, 0.62, h));
+          if (d.z < 0.0) {
+            float nx = d.x / (-d.z) / (uTanH * uAspect), ny = d.y / (-d.z) / uTanH;
+            float g = exp(-nx * nx * 2.2) * exp(-max(ny, 0.0) * 4.5);
+            c = mix(c, uGlowCol, uGlowK * g);
+          }
+          float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          c += (n - 0.5) * 0.012;
+          gl_FragColor = vec4(c, 1.0);
+          #include <colorspace_fragment>
+        }`,
+    })
+  );
+  sky.renderOrder = -10;
+  skyGroup.add(sky);
+
+  function skyAt(a) {
+    let i = 0;
+    while (i < KEYS.length - 2 && a > KEYS[i + 1].a) i++;
+    const A = KEYS[i], B = KEYS[i + 1];
+    const k = clamp((a - A.a) / (B.a - A.a), 0, 1);
+    skyU.uTop.value.lerpColors(A.t, B.t, k);
+    skyU.uMid.value.lerpColors(A.m, B.m, k);
+    skyU.uHor.value.lerpColors(A.h, B.h, k);
+  }
+
+  // sun: a flat poster-red sphere far behind the waves
+  const SUN_DIST = 70;
+  const SUN_LO = new THREE.Color('#D5532E'), SUN_HI = new THREE.Color('#B5292A');
+  const sunMat = new THREE.MeshBasicMaterial({ color: SUN_HI.clone() });
+  const sun = new THREE.Mesh(new THREE.CircleGeometry(1, 160), sunMat);
+  scene.add(sun);
+
+  // waves: a striped, undulating 3D surface laid out in screen space.
+  // Every point stays below eye level and the far edge sits exactly at eye level,
+  // so the band's top edge is the screen midline and anything below it is occluded.
+  // The far edge ripples downward by up to DIP (screen half-heights) and never rises above the midline.
+  const DIP = 0.035;
+  // Idle breath: one slow inhale/exhale per PERIOD seconds, IN is the inhale share.
+  const BREATH_WAIT = 0.6, BREATH_PERIOD = 7.5, BREATH_IN = 0.43;
+  let breathOn = 0;
+  const waveU = {
+    uT: { value: 0 },
+    uTanH: { value: Math.tan(20 * DEG) },
+    uAspect: { value: W / H },
+    uCamY: { value: CAMY },
+    uCamZ: { value: CAMZ },
+    uDip: { value: DIP },
+    uDark: { value: new THREE.Color('#161412') },
+    uSky: skyU.uHor,
+    uGlowCol: skyU.uGlowCol,
+    uGlowK: skyU.uGlowK,
+  };
+  const waveGeo = new THREE.PlaneGeometry(1, 1, 320, 300);
+  waveGeo.setAttribute('aQ', waveGeo.attributes.uv.clone());
+  const waveMat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0 });
+  waveMat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, waveU);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+        attribute vec2 aQ;
+        uniform float uT, uTanH, uAspect, uCamY, uCamZ, uDip;
+        varying float vV;
+        varying float vX;
+        float g2(float x, float y) { return exp(-(x * x + y * y)); }
+        float mounds(float X, float v, float t) {
+          float m = 0.0;
+          m += 1.00 * g2((X + 0.42 + 0.07 * sin(t * 0.23)) * 3.3, (v - 0.62 - 0.04 * sin(t * 0.31)) * 5.0);
+          m += 0.85 * g2((X - 0.38 + 0.08 * sin(t * 0.19 + 1.3)) * 3.0, (v - 0.30 + 0.03 * sin(t * 0.27)) * 4.2);
+          m += 0.70 * g2((X - 0.04 + 0.06 * sin(t * 0.29 + 2.1)) * 4.2, (v - 0.86) * 7.0);
+          m += 0.60 * g2((X + 0.78 + 0.05 * sin(t * 0.21)) * 3.0, (v - 0.14 - 0.04 * sin(t * 0.2)) * 4.0);
+          m += 0.55 * g2((X - 0.88 + 0.05 * sin(t * 0.25)) * 3.4, (v - 0.55) * 5.0);
+          float r = sin(X * 6.3 + v * 7.0 + t * 0.55) * sin(X * 2.9 - v * 4.0 - t * 0.42);
+          return m + 0.24 * r;
+        }
+        vec3 wavePos(vec2 q, out float vOut) {
+          float v = mix(-0.3, 1.0, q.y);
+          float d = mix(5.0, 40.0, q.y);
+          float X = (q.x * 2.0 - 1.0) * 1.18;
+          float room = max(1.0 - v, 0.0);
+          float off = min(0.30 * sqrt(room) * mounds(X, v, uT), room * 0.6) * (1.0 - smoothstep(0.78, 0.97, v));
+          float dip = 0.5 + 0.5 * sin(X * 3.1 + uT * 0.35) * sin(X * 1.7 - uT * 0.22 + 1.0);
+          float ndcY = (v - 1.0) + off - uDip * dip * smoothstep(0.55, 0.9, v);
+          vOut = v;
+          return vec3(X * d * uTanH * uAspect, uCamY + ndcY * d * uTanH, uCamZ - d);
+        }`)
+      .replace('#include <beginnormal_vertex>', `
+        float vv0, vv1, vv2;
+        vec3 p0 = wavePos(aQ, vv0);
+        vec3 p1 = wavePos(aQ + vec2(0.0015, 0.0), vv1);
+        vec3 p2 = wavePos(aQ + vec2(0.0, 0.0015), vv2);
+        vec3 objectNormal = normalize(cross(p1 - p0, p2 - p0));
+        vV = vv0;
+        vX = aQ.x * 2.0 - 1.0;`)
+      .replace('#include <begin_vertex>', 'vec3 transformed = p0;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 uDark, uSky, uGlowCol;
+        uniform float uGlowK;
+        varying float vV;
+        varying float vX;
+        float gStripe;`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        {
+          float th = 0.5 + 0.14 * sin(vX * 3.7 + vV * 9.0 + 1.3);
+          // Phase is anchored so a whole dark stripe ends exactly at the far edge, never a half-cut one.
+          float thEdge = 0.5 + 0.14 * sin(vX * 3.7 + 10.3);
+          float ph = (vV - 1.0) * 22.0 + 0.5 + 0.5 * thEdge - 0.01 + 0.18 * (1.0 - vV) * sin(vX * 2.3 + vV * 3.0);
+          float g = abs(fract(ph) - 0.5) * 2.0;
+          float w = fwidth(ph) * 1.6 + 1e-4;
+          gStripe = smoothstep(th - w, th + w, g);
+          diffuseColor.rgb = uDark;
+        }`)
+      .replace('#include <opaque_fragment>', `
+        // light stripes are the sky itself: unlit, same colour as the background at the horizon
+        // the afterglow continues from the sky into the stripes, fading toward the viewer
+        float gx = vX * 1.18;
+        vec3 sky = mix(uSky, uGlowCol, uGlowK * exp(-gx * gx * 2.2) * exp(-(1.0 - vV) * 3.0));
+        outgoingLight = mix(outgoingLight, sky, gStripe);
+        #include <opaque_fragment>`);
+  };
+  const waves = new THREE.Mesh(waveGeo, waveMat);
+  waves.frustumCulled = false;
+  scene.add(waves);
+
+  // lights follow the sun: warm and dim when low, bright and neutral when high
+  const key = new THREE.DirectionalLight(0xffffff, 1);
+  key.position.set(1.5, 6, 6);
+  scene.add(key, key.target);
+  key.target.position.set(0, 0, -10);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.4);
+  scene.add(rim, rim.target);
+  rim.target.position.set(0, 0, CAMZ);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x2A2230, 0.5);
+  scene.add(hemi);
+  const KEY_LO = new THREE.Color('#FF9A6A'), KEY_HI = new THREE.Color('#FFF6EA');
+
+  let sunNdcR = 0;
+  const skyTmp = new THREE.Color();
+  const sunProj = new THREE.Vector3();
+  const self = {
+    scene, camera, base, look, parallax: 0.12, parallaxY: 0, minAspect: 1.0,
+    bloom: { threshold: 5, strength: 0, radius: 0.4 },
+    // Time matching the breathing sun's height while idle (0 when not breathing); a press holds it there.
+    breathSecs: 0,
+    // Screen-space disc of the sun in CSS px (the part above the waves is what text can overlap).
+    sunDisc(out) {
+      sunProj.copy(sun.position).project(camera);
+      out.x = (sunProj.x + 1) / 2 * W;
+      out.y = (1 - sunProj.y) / 2 * H;
+      out.r = sunNdcR * H / 2;
+      return true;
+    },
+    // Is the sky behind text at screen height yPx dark? (The sun itself is handled by sunDisc.)
+    darkBehind(yPx) {
+      const ny = 1 - 2 * yPx / H;
+      const tanH = Math.tan(camera.fov * DEG / 2);
+      const h = (ny * tanH) / Math.sqrt(1 + ny * ny * tanH * tanH);
+      skyTmp.lerpColors(skyU.uHor.value, skyU.uMid.value, smooth(0, 0.2, h));
+      skyTmp.lerp(skyU.uTop.value, smooth(0.15, 0.62, h));
+      return 0.2126 * skyTmp.r + 0.7152 * skyTmp.g + 0.0722 * skyTmp.b < 0.3;
+    },
+    onStep() {},
+    onState(s) { if (s === 'done') sound.glow(); },
+    update(c) {
+      const tanH = Math.tan(camera.fov * DEG / 2), aspect = camera.aspect;
+      skyGroup.position.copy(camera.position);
+      skyGroup.updateMatrixWorld();
+      const running = c.state === 'running';
+      const f = running ? c.remain / MAX : c.level;
+      const secs = running ? c.remain : c.level * MAX;
+
+      // Sun top edge in NDC above the midline: 0 exactly when no time remains, positive otherwise.
+      const rN = Math.min(0.36, 0.42 * aspect);
+      // At zero the top sits below the deepest ripple; in the last seconds it slides from a sliver above the line to there.
+      const tail = Math.min(1, secs / 3);
+      // Idle: the sun breathes between a sliver above the crest and almost whole, never hidden and never
+      // fully clear (its bottom stays below the deepest ripple). It eases in when idle and out when interrupted.
+      let on = 0, wave = 0;
+      if (c.state === 'idle' && c.age > BREATH_WAIT) {
+        on = 1;
+        const p = ((c.age - BREATH_WAIT) % BREATH_PERIOD) / BREATH_PERIOD;
+        const e = (x) => 0.5 - 0.5 * Math.cos(Math.PI * x);
+        wave = p < BREATH_IN ? e(p / BREATH_IN) : 1 - e((p - BREATH_IN) / (1 - BREATH_IN));
+      }
+      breathOn += (on - breathOn) * ease(on > breathOn ? 1.2 : 5, c.dt);
+      const hidden = -DIP - 0.01, lo = 0.04, hi = 2 * rN - DIP - 0.05;
+      const s0 = f > 0 ? 0.95 * Math.pow(f, 0.6) + (0.025 + DIP) * tail - DIP : hidden;
+      const s = Math.max(s0, hidden + breathOn * (lo + wave * (hi - lo) - hidden));
+      // Sky and light follow where the sun actually is, so a breathing sun lights the sky like a set time would.
+      // Inverts s0 (with the tail fully on), so pressing mid-breath can hold the sun exactly where it is.
+      const fv = s > s0 ? Math.max(f, Math.pow(Math.max(0, s - 0.025) / 0.95, 1 / 0.6)) : f;
+      self.breathSecs = on && s > s0 ? Math.round(fv * MAX) : 0;
+      skyAt(0.10 + 0.90 * fv);
+      const k = Math.sqrt(fv);
+      skyU.uGlowK.value = 0.68 * (1 - smooth(0, 0.35, k)) + 0.12 * breathOn * wave;
+      skyU.uTanH.value = tanH;
+      skyU.uAspect.value = aspect;
+      // A disc parallel to the image plane projects to an exact circle anywhere on screen (a sphere would stretch).
+      sun.scale.setScalar(rN * SUN_DIST * tanH);
+      sun.position.set(0, CAMY + (s - rN) * SUN_DIST * tanH, CAMZ - SUN_DIST);
+      sun.quaternion.copy(camera.quaternion);
+      sunNdcR = rN;
+      sunMat.color.lerpColors(SUN_LO, SUN_HI, smooth(0, 0.6, k));
+
+      waveU.uT.value = c.t;
+      waveU.uTanH.value = tanH;
+      waveU.uAspect.value = aspect;
+
+      key.color.lerpColors(KEY_LO, KEY_HI, k);
+      key.intensity = 0.45 + 1.65 * smooth(0, 1, k);
+      hemi.color.copy(skyU.uTop.value);
+      hemi.intensity = 0.9 + 1.45 * k;
+      rim.position.copy(sun.position);
+      rim.color.copy(sunMat.color);
+      rim.intensity = 0.3 + 0.9 * (1 - k);
+    },
+  };
+  return self;
+}
+
+/* ---------- scene ---------- */
+const active = makeSun();
+renderPass.scene = active.scene;
+renderPass.camera = active.camera;
+bloom.threshold = active.bloom.threshold;
+bloom.strength = active.bloom.strength;
+bloom.radius = active.bloom.radius;
+
+function fitCamera() {
+  const cam = active.camera;
+  const aspect = W / H;
+  cam.aspect = aspect;
+  cam.fov = aspect >= active.minAspect
+    ? 40
+    : Math.min(80, 2 * Math.atan(Math.tan(20 * DEG) * active.minAspect / aspect) / DEG);
+  cam.updateProjectionMatrix();
+}
+
+/* ---------- state machine + interaction ---------- */
+let state = 'idle', stateAt = performance.now();
+let setSecs = 0, runStart = 0, runEnd = 0;
+let pending = false, pointerId = null, startY = 0, grabY = 0, grabU = 0;
+let shown = 0;
+const peeking = () => state === 'idle' && pointerId !== null;
+// Time held while pressing in idle: wherever the breathing sun was, or PEEK if it wasn't up yet.
+let holdSecs = PEEK;
+// A tap while running shows the remaining time for the press plus this long after release.
+const GLANCE_MS = 1500;
+let glanceUntil = 0;
+const remainSecs = () => Math.max(0, Math.ceil((runEnd - performance.now()) / 1000));
+
+function setState(s) {
+  const prev = state;
+  state = s;
+  stateAt = performance.now();
+  if (s === 'idle') setSecs = 0;
+  if (s === 'setting') setReadout(fmt(setSecs));
+  showReadout(s === 'setting');
+  active.onState(s, prev);
+}
+
+const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+function showReadout(on) {
+  readout.classList.toggle('show', on);
+  readoutSun.classList.toggle('show', on);
+}
+function setReadout(text) {
+  if (readout.textContent === text) return;
+  readout.textContent = text;
+  readoutSun.textContent = text;
+}
+function snap(raw) {
+  raw = clamp(raw, 0, MAX);
+  return raw < 60 ? Math.round(raw / 5) * 5 : Math.min(MAX, Math.round(raw / 15) * 15);
+}
+
+view.addEventListener('contextmenu', (e) => e.preventDefault());
+view.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  ensureAudio();
+  updatePointer(e);
+  if (state === 'done') setState('idle');
+  if (state === 'setting') return;
+  pending = true;
+  pointerId = e.pointerId;
+  startY = e.clientY;
+  if (peeking()) {
+    // 5 s floor: below the 3 s tail the sun is drawn lower than the breath had it, so it would dip.
+    holdSecs = active.breathSecs > 0 ? clamp(active.breathSecs, 5, MAX) : PEEK;
+    if (active.breathSecs > 0) shown = holdSecs / MAX;
+    setReadout(fmt(holdSecs));
+    showReadout(true);
+  }
+  else if (state === 'running') { setReadout(fmt(remainSecs())); showReadout(true); }
+});
+
+window.addEventListener('pointermove', (e) => {
+  updatePointer(e);
+  if (e.pointerId !== pointerId) return;
+  if (pending) {
+    if (Math.abs(e.clientY - startY) <= 4) return;
+    pending = false;
+    // Start from where the sun already is: the peek when idle, the remaining time when running.
+    setSecs = state === 'running' ? Math.min(MAX, remainSecs()) : holdSecs;
+    grabY = e.clientY;
+    grabU = Math.sqrt(setSecs / MAX);
+    setState('setting');
+  }
+  if (state !== 'setting') return;
+  const u = clamp(grabU + (grabY - e.clientY) / 240, 0, 1);
+  const s = snap(MAX * u * u);
+  if (s !== setSecs) {
+    setSecs = s;
+    setReadout(fmt(s));
+    sound.tick();
+    active.onStep();
+  }
+});
+
+function release(e) {
+  if (e.pointerId !== pointerId) return;
+  pointerId = null;
+  if (pending) {
+    pending = false;
+    if (state === 'running') glanceUntil = performance.now() + GLANCE_MS;
+    else showReadout(false);
+    return;
+  }
+  if (state !== 'setting') return;
+  if (setSecs >= 5) {
+    runStart = performance.now();
+    runEnd = runStart + setSecs * 1000;
+    setState('running');
+  } else {
+    setState('idle');
+  }
+}
+window.addEventListener('pointerup', release);
+window.addEventListener('pointercancel', release);
+
+/* ---------- parallax + resize ---------- */
+const ptr = new THREE.Vector2();
+const camOff = new THREE.Vector2();
+function updatePointer(e) {
+  ptr.set(
+    clamp((e.clientX / W) * 2 - 1, -1, 1),
+    clamp((e.clientY / H) * 2 - 1, -1, 1)
+  );
+}
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(W, H);
+  composer.setPixelRatio(pixelRatio);
+  composer.setSize(W, H);
+  fitCamera();
+}
+window.addEventListener('resize', resize);
+
+/* ---------- loop ---------- */
+const ctx = { now: 0, t: 0, dt: 0, state: 'idle', level: 0, setLevel: 0, remain: 0, runFrac: 0, age: 0 };
+let last = performance.now();
+let perfAcc = 0, perfFrames = 0;
+const textTone = new Map();
+function toneText(el, dark) {
+  if (textTone.get(el) === dark) return;
+  textTone.set(el, dark);
+  el.classList.toggle('on-dark', dark);
+  el.classList.toggle('on-light', !dark);
+}
+const centerY = (el) => el.offsetTop + el.offsetHeight / 2;
+const disc = { x: 0, y: 0, r: 0 };
+let lastClip = '';
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const rawDt = (now - last) / 1000;
+  const dt = Math.min(0.1, Math.max(0, rawDt));
+  last = now;
+
+  if (state === 'running' && now >= runEnd) setState('done');
+  if (state === 'done' && now - stateAt > 9000) setState('idle');
+  if (state === 'running') {
+    const glancing = pointerId !== null || now < glanceUntil;
+    if (glancing) setReadout(fmt(remainSecs()));
+    showReadout(glancing);
+  }
+
+  const remain = state === 'running' ? Math.max(0, (runEnd - now) / 1000) : 0;
+  let target = 0;
+  if (state === 'setting') target = setSecs / MAX;
+  else if (state === 'running') target = remain / MAX;
+  else if (peeking()) target = holdSecs / MAX;
+  if (state === 'running') shown = target;
+  else {
+    shown += (target - shown) * ease(12, dt);
+    if (Math.abs(target - shown) < 1e-5) shown = target;
+  }
+
+  ctx.now = now;
+  ctx.t = now / 1000;
+  ctx.dt = dt;
+  ctx.state = state;
+  ctx.level = shown;
+  ctx.setLevel = setSecs / MAX;
+  ctx.remain = remain;
+  ctx.runFrac = state === 'running' ? clamp((now - runStart) / (runEnd - runStart), 0, 1) : state === 'done' ? 1 : 0;
+  ctx.age = (now - stateAt) / 1000;
+
+  const k = ease(3, dt);
+  camOff.x += (ptr.x - camOff.x) * k;
+  camOff.y += (ptr.y - camOff.y) * k;
+  const cam = active.camera, p = active.parallax;
+  cam.position.set(active.base.x + camOff.x * p, active.base.y - camOff.y * p * active.parallaxY, active.base.z);
+  cam.lookAt(active.look);
+
+  active.update(ctx);
+
+  {
+    toneText(readout, active.darkBehind(centerY(readout)));
+    let clip = 'circle(0px at 0px 0px)';
+    if (active.sunDisc(disc)) {
+      const ox = disc.x - readoutSun.offsetLeft, oy = disc.y - readoutSun.offsetTop;
+      clip = `circle(${disc.r.toFixed(1)}px at ${ox.toFixed(1)}px ${oy.toFixed(1)}px)`;
+    }
+    if (clip !== lastClip) { readoutSun.style.clipPath = clip; lastClip = clip; }
+  }
+
+  if (bloomOn) composer.render(dt);
+  else renderer.render(active.scene, cam);
+
+  // Step down quality if the device can't keep up: first resolution, then bloom.
+  if (document.visibilityState === 'visible' && rawDt < 0.5) {
+    perfAcc += rawDt; perfFrames++;
+    if (perfFrames >= 120) {
+      if (perfAcc / perfFrames > 1 / 28) {
+        if (pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); resize(); }
+        else if (bloomOn) bloomOn = false;
+      }
+      perfAcc = 0; perfFrames = 0;
+    }
+  }
+}
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
